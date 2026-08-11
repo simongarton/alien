@@ -94,8 +94,8 @@ def _body_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
 
 
 def _symmetric_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
-    """Build the body mask on the left half (with irregular random drops), then
-    mirror it onto the right half so the alien is left-right symmetric."""
+    """Build the body mask on the left half, then mirror it onto the right half
+    so the alien is left-right symmetric and solidly filled."""
     full_mask = _body_mask(width, height, shape)
     half_width = (width + 1) // 2
 
@@ -103,11 +103,9 @@ def _symmetric_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]
     for row, col in full_mask:
         if col >= half_width:
             continue
-        keep = random.random() > 0.15
-        if keep:
-            result.add((row, col))
-            mirror_col = width - 1 - col
-            result.add((row, mirror_col))
+        result.add((row, col))
+        mirror_col = width - 1 - col
+        result.add((row, mirror_col))
     return result
 
 
