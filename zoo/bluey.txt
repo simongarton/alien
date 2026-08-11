@@ -1,0 +1,17 @@
+3
+B#0000FF
+W#FFFFFF
+b#000000
+11
+15
+bbbbbbbbbbbbbbb
+bbbbbBbbbBbbbbb
+bbbbbbBbBbbbbbb
+bbbbbBBBBBbbbbb
+bbBbBBBBBBBbBbb
+bbbBBWWBWWBBbbb
+bbbbBbWBbWBbbbb
+bbbBBBBBBBBBbbb
+bbBBbBbbbBbBBbb
+bBBbbbBbBbbbBBb
+bbbbbbbbbbbbbbb
