@@ -201,16 +201,21 @@ def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         if placed >= legs:
             break
         bottom = body_bottom_by_col[col]
-        if bottom + 1 < height:
-            grid[bottom + 1][col] = color
+        # Both sides of a mirrored pair share the same random length, since their
+        # body_bottom is identical (the mask is already left-right symmetric).
+        max_len = height - 1 - bottom
+        length = random.randint(1, max_len) if max_len > 0 else 0
+        for depth in range(1, length + 1):
+            grid[bottom + depth][col] = color
         mirror_col = width - 1 - col
         placed += 1
         if placed >= legs and mirror_col == col:
             break
         if mirror_col != col and placed < legs:
             mirror_bottom = body_bottom_by_col.get(mirror_col, bottom)
-            if mirror_bottom + 1 < height:
-                grid[mirror_bottom + 1][mirror_col] = color
+            for depth in range(1, length + 1):
+                if mirror_bottom + depth < height:
+                    grid[mirror_bottom + depth][mirror_col] = color
             placed += 1
 
 
@@ -238,16 +243,21 @@ def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         if placed >= arms:
             break
         top = body_top_by_col[col]
-        if top - 1 >= 0:
-            grid[top - 1][col] = color
+        # Both sides of a mirrored pair share the same random length, since their
+        # body_top is identical (the mask is already left-right symmetric).
+        max_len = top
+        length = random.randint(1, max_len) if max_len > 0 else 0
+        for depth in range(1, length + 1):
+            grid[top - depth][col] = color
         mirror_col = width - 1 - col
         placed += 1
         if placed >= arms:
             break
         if mirror_col != col:
             mirror_top = body_top_by_col.get(mirror_col, top)
-            if mirror_top - 1 >= 0:
-                grid[mirror_top - 1][mirror_col] = color
+            for depth in range(1, length + 1):
+                if mirror_top - depth >= 0:
+                    grid[mirror_top - depth][mirror_col] = color
             placed += 1
 
 
