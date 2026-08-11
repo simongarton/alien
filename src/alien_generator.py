@@ -239,6 +239,9 @@ def _place_eyes(
     return consumed
 
 
+MAX_LIMB_LENGTH = 5
+
+
 def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, height: int, legs: int, color: str) -> None:
     if legs <= 0 or not mask:
         return
@@ -265,7 +268,7 @@ def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         bottom = body_bottom_by_col[col]
         # Both sides of a mirrored pair share the same random length, since their
         # body_bottom is identical (the mask is already left-right symmetric).
-        max_len = height - 1 - bottom
+        max_len = min(MAX_LIMB_LENGTH, height - 1 - bottom)
         length = random.randint(1, max_len) if max_len > 0 else 0
         for depth in range(1, length + 1):
             grid[bottom + depth][col] = color
@@ -307,7 +310,7 @@ def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         top = body_top_by_col[col]
         # Both sides of a mirrored pair share the same random length, since their
         # body_top is identical (the mask is already left-right symmetric).
-        max_len = top
+        max_len = min(MAX_LIMB_LENGTH, top)
         length = random.randint(1, max_len) if max_len > 0 else 0
         for depth in range(1, length + 1):
             grid[top - depth][col] = color
