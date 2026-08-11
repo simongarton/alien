@@ -1,0 +1,1043 @@
+▗ ▗   ▖ ▖  Claude Code v2.1.227
+           Sonnet 5 · Claude Pro
+  ▘▘ ▝▝    ~/projects/python/alien
+
+   Tackle your toughest work with Opus 5. Switch anytime with /model.
+   +1 more · /status
+
+❯ Review the project. Looking at the output, I see lots of white pixels inside  
+  the body. I'm only expecting to see 2 or 3 eyes, the rest of the body should  
+  be a solid block of color.                                                    
+
+  Read 4 files, listed 1 directory, ran 1 shell command (ctrl+o to expand)
+
+⏺ Confirmed the bug. In _symmetric_mask (src/alien_generator.py:96-111), every
+  cell in the body mask has a 15% chance of being randomly dropped (keep = 
+  random.random() > 0.15), leaving the background color (white) showing through
+  — scattered across the whole body, not just the edges as the docstring claims.
+  That's the "white pixels inside the body" you're seeing.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Fixing it to produce a solid body mask (mirrored, no random holes):
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 5 lines, removed 7 lines
+       94  
+       95  
+       96  def _symmetric_mask(width: int, height: int, shape: str) -> se
+           t[tuple[int, int]]:
+       97 -    """Build the body mask on the left half (with irregular ra
+          -ndom drops), then                                             
+       98 -    mirror it onto the right half so the alien is left-right s
+          -ymmetric."""                                                  
+       97 +    """Build the body mask on the left half, then mirror it on
+          +to the right half                                             
+       98 +    so the alien is left-right symmetric and solidly filled.""
+          +"                                                             
+       99      full_mask = _body_mask(width, height, shape)
+      100      half_width = (width + 1) // 2
+      101  
+     ...
+      103      for row, col in full_mask:
+      104          if col >= half_width:
+      105              continue
+      106 -        keep = random.random() > 0.15                         
+      107 -        if keep:                                              
+      108 -            result.add((row, col))                            
+      109 -            mirror_col = width - 1 - col                      
+      110 -            result.add((row, mirror_col))                     
+      106 +        result.add((row, col))                                
+      107 +        mirror_col = width - 1 - col                          
+      108 +        result.add((row, mirror_col))                         
+      109      return result
+      110  
+      111  
+
+⏺ Now let's verify and run the checks.
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ Now let's generate an actual image to confirm visually:
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ Solid body now, with just the two eyes and legs showing. Let's clean up the
+  test artifact since it's not something to leave lying around:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ The repo has other pre-existing uncommitted changes (README, main.py deletion,
+  image_painter.py, src/main.py) that I didn't touch this session — I'll leave
+  those alone and only commit my fix.
+
+  Committed 1456924, ran 1 shell command (ctrl+o to expand)
+  ⎿  PostToolUse:Bash says: Tip: Run /ultrareview before you push to catch bugs 
+     with a cloud-based multi-agent review — 3 free reviews left.
+
+⏺ Fixed and committed. The cause: _symmetric_mask in src/alien_generator.py
+  randomly dropped 15% of the body-mask cells (per left-half pixel, then
+  mirrored) before painting, which punched background-colored holes scattered
+  throughout the body — not just at the edges as the old docstring implied.
+  Removed the random dropout; tests and ruff still pass, and a rendered sample
+  now shows a solid body with just the eyes.
+
+  One thing worth flagging: I left the other uncommitted changes in your working
+  tree untouched (README.md, deleted main.py, modifications to
+  src/image_painter.py and src/main.py, new src/batch.py, .gitignore) since they
+  predate this session and looked like in-progress work — let me know if you'd
+  like me to look at those too.
+
+✻ Crunched for 1m 8s
+
+❯ Make the body shapes a little more random. Also do not take up the whole      
+  grid, leave a border of 1 or a few pixels around it.                          
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 19 lines, removed 8 lines
+       53      return colors
+       54  
+       55  
+       56 +WOBBLE_RANGE = (0.85, 1.05)                                   
+       57 +                                                              
+       58 +                                                              
+       59  def _body_mask(width: int, height: int, shape: str) -> set[tup
+           le[int, int]]:
+       60      """Return the set of (row, col) cells inside the given sha
+           pe, leaving room at the
+       58 -    bottom for legs and the top for arms sticking up."""      
+       61 +    bottom for legs, the top for arms sticking up, and a borde
+          +r on all sides so the                                         
+       62 +    body never touches the edge of the grid. Each row's width 
+          +is nudged by a random                                         
+       63 +    wobble factor so the silhouette isn't a perfectly clean sh
+          +ape."""                                                       
+       64      top_margin = max(1, height // 8)
+       65      bottom_margin = max(2, height // 4)
+       66 +    side_margin = max(1, width // 8)                          
+       67      body_top = top_margin
+       68      body_bottom = height - bottom_margin
+       69 +    body_left = side_margin                                   
+       70 +    body_right = max(body_left + 1, width - side_margin)      
+       71      body_height = max(1, body_bottom - body_top)
+       72 +    body_width = max(1, body_right - body_left)               
+       73  
+       65 -    cx = (width - 1) / 2                                      
+       74 +    cx = (body_left + body_right - 1) / 2                     
+       75      cy = body_top + (body_height - 1) / 2
+       67 -    rx = width / 2                                            
+       76 +    rx = body_width / 2                                       
+       77      ry = body_height / 2
+       78  
+       79      mask = set()
+       80      for row in range(body_top, body_bottom):
+       72 -        for col in range(width):                              
+       73 -            dx = (col - cx) / rx if rx else 0                 
+       81 +        wobble = random.uniform(*WOBBLE_RANGE)                
+       82 +        row_rx = rx * wobble                                  
+       83 +        for col in range(body_left, body_right):              
+       84 +            dx = (col - cx) / row_rx if row_rx else 0         
+       85              dy = (row - cy) / ry if ry else 0
+       86              if shape == "circle":
+       87                  inside = dx * dx + dy * dy <= 1.0
+       88              elif shape == "oval":
+       89                  inside = (dx * dx) / 1.0 + (dy * dy) / 0.6 <= 
+           1.0
+       90              elif shape == "square":
+       80 -                inside = True                                 
+       91 +                inside = abs(col - cx) <= row_rx              
+       92              elif shape == "triangle":
+       93                  row_ratio = (row - body_top) / max(body_height
+            - 1, 1)
+       83 -                half_width = row_ratio * rx                   
+       94 +                half_width = row_ratio * row_rx               
+       95                  inside = abs(col - cx) <= half_width
+       96              elif shape == "triangle_inverted":
+       97                  row_ratio = (row - body_top) / max(body_height
+            - 1, 1)
+       87 -                half_width = (1 - row_ratio) * rx             
+       98 +                half_width = (1 - row_ratio) * row_rx         
+       99                  inside = abs(col - cx) <= half_width
+      100              else:
+      101                  raise ValueError(f"Unknown shape: {shape}")
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Let's visually confirm with a few generated images across shapes:
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+⏺ Looks good — border margins on all sides, and the edges now have a subtle
+  organic wobble instead of being perfectly geometric. Let's commit.
+
+  Committed 925b6e3, ran 1 shell command (ctrl+o to expand)
+
+⏺ Committed. Summary of the change in _body_mask (src/alien_generator.py):
+
+  - Added a side_margin (like the existing top/bottom margins) so the body is
+  inset from the left and right edges of the grid, not just top/bottom.
+  - Added a per-row wobble factor (uniform random 0.85–1.05) applied to the
+  effective half-width, so each shape's silhouette has a subtly irregular,
+  organic edge instead of a perfectly clean geometric outline. It's computed
+  once per row (not per pixel), so edges wobble smoothly without punching
+  interior holes, and stay left-right symmetric.
+
+  Verified visually across all five shapes (circle, oval, square, triangle,
+  triangle_inverted) — solid bodies, bordered, mildly irregular edges. Tests and
+  ruff still pass.
+
+✻ Sautéed for 1m 35s
+
+❯ The legs and arms can be a randome number of pixels long, not just 1 pixel.   
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 9 lines, removed 4 lines
+      201          if placed >= legs:
+      202              break
+      203          bottom = body_bottom_by_col[col]
+      204 -        if bottom + 1 < height:                               
+      205 -            grid[bottom + 1][col] = color                     
+      204 +        # Both sides of a mirrored pair share the same random 
+          +length, since their                                           
+      205 +        # body_bottom is identical (the mask is already left-r
+          +ight symmetric).                                              
+      206 +        max_len = height - 1 - bottom                         
+      207 +        length = random.randint(1, max_len) if max_len > 0 els
+          +e 0                                                           
+      208 +        for depth in range(1, length + 1):                    
+      209 +            grid[bottom + depth][col] = color                 
+      210          mirror_col = width - 1 - col
+      211          placed += 1
+      212          if placed >= legs and mirror_col == col:
+      213              break
+      214          if mirror_col != col and placed < legs:
+      215              mirror_bottom = body_bottom_by_col.get(mirror_col,
+            bottom)
+      212 -            if mirror_bottom + 1 < height:                    
+      213 -                grid[mirror_bottom + 1][mirror_col] = color   
+      216 +            for depth in range(1, length + 1):                
+      217 +                if mirror_bottom + depth < height:            
+      218 +                    grid[mirror_bottom + depth][mirror_col] = 
+          +color                                                         
+      219              placed += 1
+      220  
+      221  
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 9 lines, removed 4 lines
+      243          if placed >= arms:
+      244              break
+      245          top = body_top_by_col[col]
+      246 -        if top - 1 >= 0:                                      
+      247 -            grid[top - 1][col] = color                        
+      246 +        # Both sides of a mirrored pair share the same random 
+          +length, since their                                           
+      247 +        # body_top is identical (the mask is already left-righ
+          +t symmetric).                                                 
+      248 +        max_len = top                                         
+      249 +        length = random.randint(1, max_len) if max_len > 0 els
+          +e 0                                                           
+      250 +        for depth in range(1, length + 1):                    
+      251 +            grid[top - depth][col] = color                    
+      252          mirror_col = width - 1 - col
+      253          placed += 1
+      254          if placed >= arms:
+      255              break
+      256          if mirror_col != col:
+      257              mirror_top = body_top_by_col.get(mirror_col, top)
+      254 -            if mirror_top - 1 >= 0:                           
+      255 -                grid[mirror_top - 1][mirror_col] = color      
+      258 +            for depth in range(1, length + 1):                
+      259 +                if mirror_top - depth >= 0:                   
+      260 +                    grid[mirror_top - depth][mirror_col] = col
+          +or                                                            
+      261              placed += 1
+      262  
+      263  
+
+⏺ Now run tests and verify visually:
+
+  Read 3 files, ran 2 shell commands (ctrl+o to expand)
+
+⏺ Legs and arms now vary in length and stay mirrored. Let's also check an odd
+  leg count (tripod) doesn't break:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Confirmed the failure is the pre-existing, documented limitation (odd leg/arm
+  counts, e.g. a tripod's center leg, were never guaranteed symmetric — same as
+  before my change) and not a regression; even counts remain symmetric. Full
+  test suite and ruff already pass. Committing.
+
+  Committed 262e8ca, ran 1 shell command (ctrl+o to expand)
+
+⏺ Done. Legs and arms now extend a random number of pixels (1 up to whatever
+  margin space is available before hitting the grid edge) instead of always
+  being 1 pixel. Mirrored left/right limbs share the same randomly-chosen length
+  so even leg/arm counts stay left-right symmetric — verified with tests and a
+  visual check across several seeds.
+
+✻ Cooked for 1m 26s
+
+❯ The eyes should never touch the outside - there should always be body colour  
+  separating the background form the eye.                                       
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I'll rewrite _place_eyes to only place eyes at positions where a 1-pixel
+  body-colour margin surrounds them, searching for the nearest valid row/columns
+  instead of a fixed offset:
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 83 lines, removed 21 lines
+      120      return result
+      121  
+      122  
+      123 +def _eroded_mask(mask: set[tuple[int, int]], size: int) -> set
+          +[tuple[int, int]]:                                            
+      124 +    """Top-left positions where a size x size block, plus a 1-
+          +pixel margin all the                                          
+      125 +    way round it, lies entirely within mask -- i.e. where a bl
+          +ock can be placed                                             
+      126 +    without touching a background cell."""                    
+      127 +    safe = set()                                              
+      128 +    for r, c in mask:                                         
+      129 +        if all(                                               
+      130 +            (r + dr, c + dc) in mask                          
+      131 +            for dr in range(-1, size + 1)                     
+      132 +            for dc in range(-1, size + 1)                     
+      133 +        ):                                                    
+      134 +            safe.add((r, c))                                  
+      135 +    return safe                                               
+      136 +                                                              
+      137 +                                                              
+      138  def _place_eyes(
+      139      grid: list[list[str]],
+      140      mask: set[tuple[int, int]],
+     ...
+      143      eyes: int,
+      144      bigeyes: bool,
+      145  ) -> set[tuple[int, int]]:
+      131 -    """Paint eyes onto the grid, symmetric about the vertical 
+          -centre line.                                                  
+      132 -    Returns the set of cells consumed by eyes, so other featur
+          -es avoid them."""                                             
+      146 +    """Paint eyes onto the grid, symmetric about the vertical 
+          +centre line. Eyes are                                         
+      147 +    only ever placed where a ring of body colour surrounds the
+          +m, so an eye never                                            
+      148 +    touches the background directly. Returns the set of cells 
+          +consumed by eyes,                                             
+      149 +    so other features avoid them."""                          
+      150      if not mask:
+      151          return set()
+      152  
+      136 -    body_rows = sorted({row for row, _ in mask})              
+      137 -    eye_row = body_rows[max(0, len(body_rows) // 4)]          
+      153      cx = (width - 1) / 2
+      139 -    consumed = set()                                          
+      154 +    body_rows = sorted({row for row, _ in mask})              
+      155 +    target_row = body_rows[max(0, len(body_rows) // 4)]       
+      156  
+      157      eye_size = 2 if bigeyes else 1
+      142 -    # Fit guard: degrade to single-pixel eyes if there isn't r
+          -oom for a 2x2 block.                                          
+      143 -    if bigeyes and (eye_row + 1 >= height or width < 4):      
+      158 +    safe = _eroded_mask(mask, eye_size)                       
+      159 +    if not safe and eye_size == 2:                            
+      160 +        # Fit guard: degrade to single-pixel eyes if there isn
+          +'t room for a 2x2 block.                                      
+      161          eye_size = 1
+      162          bigeyes = False
+      163 +        safe = _eroded_mask(mask, eye_size)                   
+      164 +    if not safe:                                              
+      165 +        return set()                                          
+      166  
+      147 -    pair_offset = max(1, int(width * 0.2))                    
+      148 -    left_col = round(cx - pair_offset)                        
+      149 -    right_col = width - 1 - left_col  # mirror of left_col, no
+          -t independently rounded                                       
+      150 -    # Centre "eye" spans both middle columns so it mirrors its
+          -elf even when width                                           
+      151 -    # is even (there is no single centre pixel): floor(cx) and
+          - ceil(cx) are always                                          
+      152 -    # mirror images of each other, collapsing to one column wh
+          -en width is odd.                                              
+      153 -    center_cols = sorted({width // 2 - (1 if width % 2 == 0 el
+          -se 0), width // 2})                                           
+      167 +    def mirror(col: int) -> int:                              
+      168 +        return width - eye_size - col                         
+      169  
+      155 -    cols = [left_col, right_col]                              
+      156 -    if eyes == 3:                                             
+      157 -        cols = center_cols + cols                             
+      170 +    cols_by_row: dict[int, set[int]] = {}                     
+      171 +    for row, col in safe:                                     
+      172 +        cols_by_row.setdefault(row, set()).add(col)           
+      173 +    ordered_rows = sorted(cols_by_row, key=lambda row: (abs(ro
+          +w - target_row), row))                                        
+      174  
+      159 -    if eye_row + eye_size - 1 >= height:                      
+      160 -        return consumed                                       
+      175 +    pair_offset = max(1, int(width * 0.2))                    
+      176 +    desired_left = cx - pair_offset                           
+      177 +    center_target = width / 2 - eye_size / 2                  
+      178  
+      162 -    for col in cols:                                          
+      163 -        if col < 0 or col + eye_size - 1 >= width:            
+      179 +    def pick_pair(row_cols: set[int], desired: float, exclude:
+          + set[int]) -> tuple[int, int] | None:                         
+      180 +        candidates = []                                       
+      181 +        for col in row_cols:                                  
+      182 +            twin = mirror(col)                                
+      183 +            if twin not in row_cols or col > twin:            
+      184 +                continue                                      
+      185 +            block = set(range(col, col + eye_size)) | set(rang
+          +e(twin, twin + eye_size))                                     
+      186 +            if block & exclude:                               
+      187 +                continue                                      
+      188 +            candidates.append(col)                            
+      189 +        if not candidates:                                    
+      190 +            return None                                       
+      191 +        best = min(candidates, key=lambda col: abs(col - desir
+          +ed))                                                          
+      192 +        return best, mirror(best)                             
+      193 +                                                              
+      194 +    eye_row = None                                            
+      195 +    final_cols: list[int] = []                                
+      196 +    fallback: tuple[int, list[int]] | None = None             
+      197 +    for row in ordered_rows:                                  
+      198 +        row_cols = cols_by_row[row]                           
+      199 +        outer = pick_pair(row_cols, desired_left, set())      
+      200 +        if outer is None:                                     
+      201              continue
+      202 +        left_col, right_col = outer                           
+      203 +        chosen = [left_col] if left_col == right_col else [lef
+          +t_col, right_col]                                             
+      204  
+      205 +        if eyes != 3:                                         
+      206 +            eye_row, final_cols = row, chosen                 
+      207 +            break                                             
+      208 +                                                              
+      209 +        occupied = set()                                      
+      210 +        for col in chosen:                                    
+      211 +            occupied.update(range(col, col + eye_size))       
+      212 +        center = pick_pair(row_cols, center_target, occupied) 
+      213 +        if center is not None:                                
+      214 +            cl, cr = center                                   
+      215 +            center_cols = [cl] if cl == cr else [cl, cr]      
+      216 +            eye_row, final_cols = row, center_cols + chosen   
+      217 +            break                                             
+      218 +        if fallback is None:                                  
+      219 +            fallback = (row, chosen)                          
+      220 +                                                              
+      221 +    if eye_row is None:                                       
+      222 +        if fallback is None:                                  
+      223 +            return set()                                      
+      224 +        eye_row, final_cols = fallback                        
+      225 +                                                              
+      226 +    consumed = set()                                          
+      227 +    for col in final_cols:                                    
+      228          for dr in range(eye_size):
+      229              for dc in range(eye_size):
+      230                  r, c = eye_row + dr, col + dc
+
+⏺ Now let's run the tests:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Now let's write a verification script that checks the "no eye touches
+  background" invariant across many random generations:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ That was a false alarm from my test script — I used background #ffffff which
+  is literally the same color as EYE_COLOR (#FFFFFF), so my ASCII check couldn't
+  tell eyes from background. Let me redo the check with a distinct background
+  color.
+
+  Searched for 1 pattern, ran 9 shell commands (ctrl+o to expand)
+⏺ That "violation" was a false alarm too — the CGA palette includes pure white,
+  and since I used a non-white background (#123456), white remained a valid body
+  color and got randomly chosen as body_color, coincidentally matching
+  EYE_COLOR in my color-based check. Let me verify properly using mask
+  membership instead of color:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ 0 violations across 5000 random configurations — eyes never touch the outside.
+  About 35% of runs got no eyes at all, but those are almost all tiny grids
+  (4×4, 6×6) where there simply isn't room for a margined eye; let's confirm the
+  default 16×16 size reliably gets eyes.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ At the default 16×16 size, eyes are placed successfully every time. Now let's
+  run the full test suite and ruff, then visually check a few renders:
+
+  Read 4 files, ran 2 shell commands (ctrl+o to expand)
+
+⏺ All eyes are cleanly inset with body color around them in every sample. Let's
+  commit.
+
+  Committed 533f8d7, ran 1 shell command (ctrl+o to expand)
+
+⏺ Committed. Summary of the fix in _place_eyes (src/alien_generator.py):
+
+  - Added _eroded_mask, which returns only the positions where an eye block plus
+  a full 1-pixel margin lies entirely inside the body mask.
+  - Eye placement now searches rows/columns from that eroded set (starting near
+  the previous target position, expanding outward) instead of using a fixed
+  offset computed purely from width/height — so eyes always land somewhere the
+  body is thick enough to keep them fully surrounded.
+  - Verified with 5000 randomized configurations (various sizes, shapes, eye
+  counts, bigeyes) that zero eye cells ever border a non-body cell; at the
+  default 16×16 size eyes were placed successfully in all 3000 trial runs.
+
+  One tradeoff worth flagging: on very small or very thin grids (e.g. 4×4, or a
+  narrow triangle silhouette), there may be nowhere that satisfies the
+  1-pixel-margin rule, so the alien ends up with no eyes rather than eyes that
+  violate the rule. That matches your "always" requirement literally, but it's a
+  behavior change from before, where an eye was always drawn even if it touched
+  the edge. Let me know if you'd instead want a minimum grid-size guard or some
+  other fallback for that edge case.
+
+✻ Baked for 6m 38s
+
+❯ The maximum leg and arm length should be 5.                                   
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 3 lines
+      239      return consumed
+      240  
+      241  
+      242 +MAX_LIMB_LENGTH = 5                                           
+      243 +                                                              
+      244 +                                                              
+      245  def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]
+           ], width: int, height: int, legs: int, color: str) -> None:
+      246      if legs <= 0 or not mask:
+      247          return
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 1 line, removed 1 line
+      268          bottom = body_bottom_by_col[col]
+      269          # Both sides of a mirrored pair share the same random 
+           length, since their
+      270          # body_bottom is identical (the mask is already left-r
+           ight symmetric).
+      271 -        max_len = height - 1 - bottom                         
+      271 +        max_len = min(MAX_LIMB_LENGTH, height - 1 - bottom)   
+      272          length = random.randint(1, max_len) if max_len > 0 els
+           e 0
+      273          for depth in range(1, length + 1):
+      274              grid[bottom + depth][col] = color
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 1 line, removed 1 line
+      310          top = body_top_by_col[col]
+      311          # Both sides of a mirrored pair share the same random 
+           length, since their
+      312          # body_top is identical (the mask is already left-righ
+           t symmetric).
+      313 -        max_len = top                                         
+      313 +        max_len = min(MAX_LIMB_LENGTH, top)                   
+      314          length = random.randint(1, max_len) if max_len > 0 els
+           e 0
+      315          for depth in range(1, length + 1):
+      316              grid[top - depth][col] = color
+
+⏺ Now let's run tests and verify:
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+⏺ Confirmed across 3000 trials on large grids — max observed leg/arm length is
+  exactly 5, never more. Committing.
+
+  Committed c607aff, ran 1 shell command (ctrl+o to expand)
+
+⏺ Done. Legs and arms are now capped at 5 pixels via a MAX_LIMB_LENGTH constant,
+  applied in both _add_legs and _add_arms (min(MAX_LIMB_LENGTH, 
+  available_space)), so length still shrinks near a grid edge but never exceeds
+  5. Tests and ruff pass, verified with 3000 randomized trials on larger grids.
+
+✻ Cooked for 43s
+❯ Legs and arms should never touch - should never be right next to each other,  
+  there always should be at least a 1 pixel gap.                                
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 35 lines, removed 2 lines
+      242  MAX_LIMB_LENGTH = 5
+      243  
+      244  
+      245 +def _select_limb_columns(half: list[int], width: int, pairs_ne
+          +eded: int) -> list[int]:                                      
+      246 +    """Choose up to pairs_needed columns from the left-half ca
+          +ndidates, evenly                                              
+      247 +    spaced, skipping any column that would land a limb right n
+          +ext to an already                                             
+      248 +    chosen one (or its mirror on the other side) -- limbs alwa
+          +ys keep at least a                                            
+      249 +    1 pixel gap between them."""                              
+      250 +    if not half or pairs_needed <= 0:                         
+      251 +        return []                                             
+      252 +                                                              
+      253 +    def conflicts(col: int, chosen: list[int]) -> bool:       
+      254 +        mirror_col = width - 1 - col                          
+      255 +        if mirror_col != col and abs(mirror_col - col) <= 1:  
+      256 +            return True                                       
+      257 +        return any(abs(col - c) <= 1 or abs(col - (width - 1 -
+          + c)) <= 1 for c in chosen)                                    
+      258 +                                                              
+      259 +    step = max(1, len(half) // pairs_needed)                  
+      260 +    chosen: list[int] = []                                    
+      261 +    for col in half[::step]:                                  
+      262 +        if len(chosen) >= pairs_needed:                       
+      263 +            break                                             
+      264 +        if not conflicts(col, chosen):                        
+      265 +            chosen.append(col)                                
+      266 +                                                              
+      267 +    if len(chosen) < pairs_needed:                            
+      268 +        for col in half:                                      
+      269 +            if len(chosen) >= pairs_needed:                   
+      270 +                break                                         
+      271 +            if col in chosen:                                 
+      272 +                continue                                      
+      273 +            if not conflicts(col, chosen):                    
+      274 +                chosen.append(col)                            
+      275 +                                                              
+      276 +    return chosen                                             
+      277 +                                                              
+      278 +                                                              
+      279  def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]
+           ], width: int, height: int, legs: int, color: str) -> None:
+      280      if legs <= 0 or not mask:
+      281          return
+     ...
+      292          half = candidate_cols[: max(1, len(candidate_cols) // 
+           2)]
+      293  
+      294      pairs_needed = (legs + 1) // 2
+      261 -    step = max(1, len(half) // max(pairs_needed, 1))          
+      262 -    chosen = half[::step][:pairs_needed]                      
+      295 +    chosen = _select_limb_columns(half, width, pairs_needed)  
+      296  
+      297      placed = 0
+      298      for col in chosen:
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 1 line, removed 2 lines
+      333          half = candidate_cols[: max(1, len(candidate_cols) // 
+           2)]
+      334  
+      335      pairs_needed = (arms + 1) // 2
+      336 -    step = max(1, len(half) // max(pairs_needed, 1))          
+      337 -    chosen = half[::step][:pairs_needed]                      
+      336 +    chosen = _select_limb_columns(half, width, pairs_needed)  
+      337  
+      338      placed = 0
+      339      for col in chosen:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Now let's verify the gap constraint holds across many random configurations:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ 0 violations across 4000 randomized configurations (up to 8 legs/arms
+  requested). Let's visually confirm with a rendered example that has many legs
+  requested:
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ All legs and arms are clearly separated with visible body-color gaps between
+  them, even with 6 legs / 4 arms requested. Committing.
+
+  Committed 98129c6, ran 1 shell command (ctrl+o to expand)
+
+⏺ Committed. Added _select_limb_columns, a shared helper used by both _add_legs
+  and _add_arms, that skips any candidate column landing within 1 pixel of an
+  already-chosen limb column or its mirror across the centre line (so limbs
+  straddling the midline don't collide either). If more legs/arms are requested
+  than can fit with the gap, fewer are placed rather than violating the rule.
+
+  Verified with 4000 randomized configurations (up to 8 legs/arms requested on
+  various sizes/shapes) — zero violations of the minimum 1-pixel gap — and
+  confirmed visually with rendered samples.
+
+✻ Baked for 1m 46s
+
+❯ Legs and arms should always be the same color as the body.                    
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 2 lines, removed 3 lines
+      386      consumed = _place_eyes(grid, mask, width, height, eyes, bi
+           geyes)
+      387      feature_mask = mask - consumed
+      388  
+      389 -    limb_color = random.choice(colors)                        
+      390 -    _add_legs(grid, feature_mask, width, height, legs, limb_co
+          -lor)                                                          
+      391 -    _add_arms(grid, feature_mask, width, height, arms, limb_co
+          -lor)                                                          
+      389 +    _add_legs(grid, feature_mask, width, height, legs, body_co
+          +lor)                                                          
+      390 +    _add_arms(grid, feature_mask, width, height, arms, body_co
+          +lor)                                                          
+      391  
+      392      return grid
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Let's verify visually and commit:
+
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ Legs, arms, and body are all the same solid color now (limbs simply blend into
+  the silhouette).
+
+  Committed 083f186, ran 1 shell command (ctrl+o to expand)
+
+⏺ Done. _add_legs and _add_arms now both take body_color instead of a separately
+  randomized limb_color, so limbs are always the same color as the body. Now
+  that limbs blend with the silhouette, the earlier "1-pixel gap between limbs"
+  fix from the previous step is what keeps individual legs/arms visually
+  distinct from each other. Tests, ruff, and a visual check all pass.
+
+✻ Sautéed for 34s
+
+❯ Eyes should never touch another eye, there should always be at least 1 pixel  
+  gap. And if we're using bigeyes, then the black pixel should be in the same   
+  left or right corner for all the eyes.                                        
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 19 lines, removed 6 lines
+      176      desired_left = cx - pair_offset
+      177      center_target = width / 2 - eye_size / 2
+      178  
+      179 -    def pick_pair(row_cols: set[int], desired: float, exclude:
+          - set[int]) -> tuple[int, int] | None:                         
+      179 +    def pick_pair(                                            
+      180 +        row_cols: set[int], desired: float, exclude: set[int],
+          + require_gap: bool                                            
+      181 +    ) -> tuple[int, int] | None:                              
+      182          candidates = []
+      183          for col in row_cols:
+      184              twin = mirror(col)
+      185              if twin not in row_cols or col > twin:
+      186                  continue
+      187 +            # require_gap distinguishes two genuinely separate
+          + eyes (which must keep                                        
+      188 +            # at least a 1 pixel gap between them) from the ce
+          +ntre "eye", which is                                          
+      189 +            # allowed to span both middle columns as a single 
+          +feature when width is                                         
+      190 +            # even (there's no single centre pixel to sit on).
+      191 +            if require_gap and twin != col and twin - (col + e
+          +ye_size - 1) < 2:                                             
+      192 +                continue                                      
+      193              block = set(range(col, col + eye_size)) | set(rang
+           e(twin, twin + eye_size))
+      194              if block & exclude:
+      195                  continue
+     ...
+      204      fallback: tuple[int, list[int]] | None = None
+      205      for row in ordered_rows:
+      206          row_cols = cols_by_row[row]
+      199 -        outer = pick_pair(row_cols, desired_left, set())      
+      207 +        outer = pick_pair(row_cols, desired_left, set(), requi
+          +re_gap=True)                                                  
+      208          if outer is None:
+      209              continue
+      210          left_col, right_col = outer
+     ...
+      214              eye_row, final_cols = row, chosen
+      215              break
+      216  
+      217 +        # Buffer by 1 column on each side so the centre eye ca
+          +n't end up right                                              
+      218 +        # next to an outer eye either.                        
+      219          occupied = set()
+      220          for col in chosen:
+      211 -            occupied.update(range(col, col + eye_size))       
+      212 -        center = pick_pair(row_cols, center_target, occupied) 
+      221 +            occupied.update(range(col - 1, col + eye_size + 1)
+          +)                                                             
+      222 +        center = pick_pair(row_cols, center_target, occupied, 
+          +require_gap=False)                                            
+      223          if center is not None:
+      224              cl, cr = center
+      225              center_cols = [cl] if cl == cr else [cl, cr]
+     ...
+      233              return set()
+      234          eye_row, final_cols = fallback
+      235  
+      236 +    # All eyes get their pupil in the same corner (left or rig
+          +ht), chosen once,                                             
+      237 +    # rather than each eye pointing outward toward its own sid
+          +e.                                                            
+      238 +    pupil_left = random.choice([True, False])                 
+      239 +                                                              
+      240      consumed = set()
+      241      for col in final_cols:
+      242          for dr in range(eye_size):
+     ...
+      246                  consumed.add((r, c))
+      247  
+      248          if bigeyes:
+      235 -            is_left_half = col < cx                           
+      236 -            pupil_col = col if is_left_half else col + eye_siz
+          -e - 1                                                         
+      249 +            pupil_col = col if pupil_left else col + eye_size 
+          +- 1                                                           
+      250              grid[eye_row + eye_size - 1][pupil_col] = PUPIL_CO
+           LOR
+      251  
+      252      return consumed
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ That ruff warning is in src/batch.py, a pre-existing untracked file I haven't
+  touched — unrelated to this change. alien_generator.py itself passes cleanly.
+
+  Now let's verify both new invariants with randomized checks:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ 0 violations across 6000 randomized configurations. Now let's verify the
+  pupil-corner consistency:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All pupils land in the same corner across every eye in every run. Let's do a
+  final visual sanity check:
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ All three eyes are separated with gaps, and all pupils sit in the same corner
+  (left in these examples). Committing.
+
+  Committed ba81728, ran 1 shell command (ctrl+o to expand)
+
+⏺ Done. Two changes to _place_eyes (src/alien_generator.py):
+
+  1. Eye gap: pick_pair now rejects any candidate where the two symmetric eye
+  blocks would end up closer than 1 pixel apart — applied strictly for the outer
+  left/right pair, and the center eye's search also excludes a 1-pixel buffer
+  around the outer eyes. (The center eye is still allowed to span both middle
+  columns as a single merged feature on even-width grids — that's one eye, not
+  two touching ones.)
+  2. Pupil corner: previously each bigeye's pupil pointed outward (mirrored, so
+  left and right eyes looked away from each other). Now one corner (left or
+  right) is chosen once per alien and used for every eye's pupil, so they all
+  "look" the same direction.
+
+  Verified with 6000 randomized configs (zero gap violations) and 2862 bigeyes
+  runs (zero pupil-side mismatches), plus visual renders. Tests and ruff pass.
+
+✻ Churned for 2m 14s
+
+❯ Arms and legs should be symmetrical and at least 2 pixels long.               
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now let's replace both functions with a shared, symmetry-guaranteeing
+  implementation:
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 1 line
+      252      return consumed
+      253  
+      254  
+      255 +MIN_LIMB_LENGTH = 2                                           
+      256  MAX_LIMB_LENGTH = 5
+      257  
+      258  
+
+⏺ Update(src/alien_generator.py)
+  ⎿  Added 48 lines, removed 44 lines
+      290      return chosen
+      291  
+      292  
+      293 +def _paint_limb(                                              
+      294 +    grid: list[list[str]], col: int, edge: int, length: int, c
+          +olor: str, grow_down: bool, height: int                       
+      295 +) -> None:                                                    
+      296 +    for depth in range(1, length + 1):                        
+      297 +        row = edge + depth if grow_down else edge - depth     
+      298 +        if 0 <= row < height:                                 
+      299 +            grid[row][col] = color                            
+      300 +                                                              
+      301 +                                                              
+      302 +def _place_limbs(                                             
+      303 +    grid: list[list[str]],                                    
+      304 +    width: int,                                               
+      305 +    height: int,                                              
+      306 +    edge_by_col: dict[int, int],                              
+      307 +    chosen_cols: list[int],                                   
+      308 +    count: int,                                               
+      309 +    color: str,                                               
+      310 +    grow_down: bool,                                          
+      311 +) -> None:                                                    
+      312 +    """Paint up to `count` limbs from chosen_cols. A limb and 
+          +its mirror are                                                
+      313 +    always added together (or, for a column on the centre line
+          +, as a single                                                 
+      314 +    self-mirrored limb) so the result stays left-right symmetr
+          +ic, and a limb                                                
+      315 +    is only drawn when there's room for at least MIN_LIMB_LENG
+          +TH pixels."""                                                 
+      316 +    remaining = count                                         
+      317 +    for col in chosen_cols:                                   
+      318 +        if remaining <= 0:                                    
+      319 +            break                                             
+      320 +        mirror_col = width - 1 - col                          
+      321 +        edge = edge_by_col[col]                               
+      322 +        available = height - 1 - edge if grow_down else edge  
+      323 +        max_len = min(MAX_LIMB_LENGTH, available)             
+      324 +        if max_len < MIN_LIMB_LENGTH:                         
+      325 +            continue                                          
+      326 +        unit = 1 if mirror_col == col else 2                  
+      327 +        if unit > remaining:                                  
+      328 +            continue                                          
+      329 +                                                              
+      330 +        length = random.randint(MIN_LIMB_LENGTH, max_len)     
+      331 +        _paint_limb(grid, col, edge, length, color, grow_down,
+          + height)                                                      
+      332 +        remaining -= 1                                        
+      333 +        if mirror_col != col:                                 
+      334 +            mirror_edge = edge_by_col.get(mirror_col, edge)   
+      335 +            _paint_limb(grid, mirror_col, mirror_edge, length,
+          + color, grow_down, height)                                    
+      336 +            remaining -= 1                                    
+      337 +                                                              
+      338 +                                                              
+      339  def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]
+           ], width: int, height: int, legs: int, color: str) -> None:
+      340      if legs <= 0 or not mask:
+      341          return
+     ...
+      353  
+      354      pairs_needed = (legs + 1) // 2
+      355      chosen = _select_limb_columns(half, width, pairs_needed)
+      356 +    _place_limbs(grid, width, height, body_bottom_by_col, chos
+          +en, legs, color, grow_down=True)                              
+      357  
+      311 -    placed = 0                                                
+      312 -    for col in chosen:                                        
+      313 -        if placed >= legs:                                    
+      314 -            break                                             
+      315 -        bottom = body_bottom_by_col[col]                      
+      316 -        # Both sides of a mirrored pair share the same random 
+          -length, since their                                           
+      317 -        # body_bottom is identical (the mask is already left-r
+          -ight symmetric).                                              
+      318 -        max_len = min(MAX_LIMB_LENGTH, height - 1 - bottom)   
+      319 -        length = random.randint(1, max_len) if max_len > 0 els
+          -e 0                                                           
+      320 -        for depth in range(1, length + 1):                    
+      321 -            grid[bottom + depth][col] = color                 
+      322 -        mirror_col = width - 1 - col                          
+      323 -        placed += 1                                           
+      324 -        if placed >= legs and mirror_col == col:              
+      325 -            break                                             
+      326 -        if mirror_col != col and placed < legs:               
+      327 -            mirror_bottom = body_bottom_by_col.get(mirror_col,
+          - bottom)                                                      
+      328 -            for depth in range(1, length + 1):                
+      329 -                if mirror_bottom + depth < height:            
+      330 -                    grid[mirror_bottom + depth][mirror_col] = 
+          -color                                                         
+      331 -            placed += 1                                       
+      358  
+      333 -                                                              
+      359  def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]
+           ], width: int, height: int, arms: int, color: str) -> None:
+      360      if arms <= 0 or not mask:
+      361          return
+     ...
+      373  
+      374      pairs_needed = (arms + 1) // 2
+      375      chosen = _select_limb_columns(half, width, pairs_needed)
+      376 +    _place_limbs(grid, width, height, body_top_by_col, chosen,
+          + arms, color, grow_down=False)                                
+      377  
+      352 -    placed = 0                                                
+      353 -    for col in chosen:                                        
+      354 -        if placed >= arms:                                    
+      355 -            break                                             
+      356 -        top = body_top_by_col[col]                            
+      357 -        # Both sides of a mirrored pair share the same random 
+          -length, since their                                           
+      358 -        # body_top is identical (the mask is already left-righ
+          -t symmetric).                                                 
+      359 -        max_len = min(MAX_LIMB_LENGTH, top)                   
+      360 -        length = random.randint(1, max_len) if max_len > 0 els
+          -e 0                                                           
+      361 -        for depth in range(1, length + 1):                    
+      362 -            grid[top - depth][col] = color                    
+      363 -        mirror_col = width - 1 - col                          
+      364 -        placed += 1                                           
+      365 -        if placed >= arms:                                    
+      366 -            break                                             
+      367 -        if mirror_col != col:                                 
+      368 -            mirror_top = body_top_by_col.get(mirror_col, top) 
+      369 -            for depth in range(1, length + 1):                
+      370 -                if mirror_top - depth >= 0:                   
+      371 -                    grid[mirror_top - depth][mirror_col] = col
+          -or                                                            
+      372 -            placed += 1                                       
+      378  
+      374 -                                                              
+      379  def generate_alien(
+      380      width: int = 16,
+      381      height: int = 16,
+
+⏺ Now let's run tests:
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Let's verify odd leg/arm counts are now also symmetric, and that minimum
+  length 2 always holds:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Zero asymmetric results across 2000 random trials (including odd leg/arm
+  counts). Now verify the minimum-length-2 constraint:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Minimum observed leg length is exactly 2, no violations. Let's do a visual
+  check and confirm the leg-gap and pupil-corner invariants from earlier still
+  hold, then commit.
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ All limbs are symmetric and at least 2 pixels long. Committing.
+
+  Committed 088165f, ran 1 shell command (ctrl+o to expand)
+
+⏺ Done. Refactored the leg/arm placement into a shared _place_limbs helper that
+  only ever adds a complete mirrored pair (or a single limb on the true centre
+  column) at once, and only when there's room for at least MIN_LIMB_LENGTH (2)
+  pixels.
+
+  Worth flagging: this changes behavior for odd counts like legs=3 — previously
+  that placed 3 legs but broke symmetry (per the old test comment acknowledging
+  this); now it prioritizes symmetry and may place fewer than requested (e.g. 2,
+  or 3 only if a true centre column happens to be available). Verified with
+  2000 random trials: zero asymmetric results, and minimum observed limb length
+  is exactly 2. Tests and ruff pass.
+
+✻ Worked for 1m 55s
+※ recap: We've been iteratively refining the alien_generator.py pixel-art rules (eyes, limbs, colors, symmetry) with tests and visual checks after each change. Latest fix (symmetric limbs, min length 2) is committed and verified; ready for your next request. (disable recaps in /config)
