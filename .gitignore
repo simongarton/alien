@@ -11,4 +11,6 @@ wheels/
 
 # Generated demo output
 /alien.png
+/alien.json
+/alien.txt
 aliens/
