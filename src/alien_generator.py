@@ -176,11 +176,19 @@ def _place_eyes(
     desired_left = cx - pair_offset
     center_target = width / 2 - eye_size / 2
 
-    def pick_pair(row_cols: set[int], desired: float, exclude: set[int]) -> tuple[int, int] | None:
+    def pick_pair(
+        row_cols: set[int], desired: float, exclude: set[int], require_gap: bool
+    ) -> tuple[int, int] | None:
         candidates = []
         for col in row_cols:
             twin = mirror(col)
             if twin not in row_cols or col > twin:
+                continue
+            # require_gap distinguishes two genuinely separate eyes (which must keep
+            # at least a 1 pixel gap between them) from the centre "eye", which is
+            # allowed to span both middle columns as a single feature when width is
+            # even (there's no single centre pixel to sit on).
+            if require_gap and twin != col and twin - (col + eye_size - 1) < 2:
                 continue
             block = set(range(col, col + eye_size)) | set(range(twin, twin + eye_size))
             if block & exclude:
@@ -196,7 +204,7 @@ def _place_eyes(
     fallback: tuple[int, list[int]] | None = None
     for row in ordered_rows:
         row_cols = cols_by_row[row]
-        outer = pick_pair(row_cols, desired_left, set())
+        outer = pick_pair(row_cols, desired_left, set(), require_gap=True)
         if outer is None:
             continue
         left_col, right_col = outer
@@ -206,10 +214,12 @@ def _place_eyes(
             eye_row, final_cols = row, chosen
             break
 
+        # Buffer by 1 column on each side so the centre eye can't end up right
+        # next to an outer eye either.
         occupied = set()
         for col in chosen:
-            occupied.update(range(col, col + eye_size))
-        center = pick_pair(row_cols, center_target, occupied)
+            occupied.update(range(col - 1, col + eye_size + 1))
+        center = pick_pair(row_cols, center_target, occupied, require_gap=False)
         if center is not None:
             cl, cr = center
             center_cols = [cl] if cl == cr else [cl, cr]
@@ -223,6 +233,10 @@ def _place_eyes(
             return set()
         eye_row, final_cols = fallback
 
+    # All eyes get their pupil in the same corner (left or right), chosen once,
+    # rather than each eye pointing outward toward its own side.
+    pupil_left = random.choice([True, False])
+
     consumed = set()
     for col in final_cols:
         for dr in range(eye_size):
@@ -232,8 +246,7 @@ def _place_eyes(
                 consumed.add((r, c))
 
         if bigeyes:
-            is_left_half = col < cx
-            pupil_col = col if is_left_half else col + eye_size - 1
+            pupil_col = col if pupil_left else col + eye_size - 1
             grid[eye_row + eye_size - 1][pupil_col] = PUPIL_COLOR
 
     return consumed
