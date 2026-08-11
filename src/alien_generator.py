@@ -242,6 +242,40 @@ def _place_eyes(
 MAX_LIMB_LENGTH = 5
 
 
+def _select_limb_columns(half: list[int], width: int, pairs_needed: int) -> list[int]:
+    """Choose up to pairs_needed columns from the left-half candidates, evenly
+    spaced, skipping any column that would land a limb right next to an already
+    chosen one (or its mirror on the other side) -- limbs always keep at least a
+    1 pixel gap between them."""
+    if not half or pairs_needed <= 0:
+        return []
+
+    def conflicts(col: int, chosen: list[int]) -> bool:
+        mirror_col = width - 1 - col
+        if mirror_col != col and abs(mirror_col - col) <= 1:
+            return True
+        return any(abs(col - c) <= 1 or abs(col - (width - 1 - c)) <= 1 for c in chosen)
+
+    step = max(1, len(half) // pairs_needed)
+    chosen: list[int] = []
+    for col in half[::step]:
+        if len(chosen) >= pairs_needed:
+            break
+        if not conflicts(col, chosen):
+            chosen.append(col)
+
+    if len(chosen) < pairs_needed:
+        for col in half:
+            if len(chosen) >= pairs_needed:
+                break
+            if col in chosen:
+                continue
+            if not conflicts(col, chosen):
+                chosen.append(col)
+
+    return chosen
+
+
 def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, height: int, legs: int, color: str) -> None:
     if legs <= 0 or not mask:
         return
@@ -258,8 +292,7 @@ def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         half = candidate_cols[: max(1, len(candidate_cols) // 2)]
 
     pairs_needed = (legs + 1) // 2
-    step = max(1, len(half) // max(pairs_needed, 1))
-    chosen = half[::step][:pairs_needed]
+    chosen = _select_limb_columns(half, width, pairs_needed)
 
     placed = 0
     for col in chosen:
@@ -300,8 +333,7 @@ def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
         half = candidate_cols[: max(1, len(candidate_cols) // 2)]
 
     pairs_needed = (arms + 1) // 2
-    step = max(1, len(half) // max(pairs_needed, 1))
-    chosen = half[::step][:pairs_needed]
+    chosen = _select_limb_columns(half, width, pairs_needed)
 
     placed = 0
     for col in chosen:
