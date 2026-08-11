@@ -64,3 +64,17 @@ There's a likely bug here with `full` and `cga` we could pick a color that match
 This is from a 16x16 grid using the full color palette and randomizing most other options.
 
 ![Examples](images/full_color_examples.png)
+
+## Next steps
+
+### Better aliens
+
+I'm not 100% happy yet, but need to look at more examples to figure out the rules.
+
+### LED matrix display
+
+How am I going to do this ?
+
+### API
+
+Create and publish to AWS a rate-limited / API key protected API that will return a random image. Pass the DNA as query parameters.
