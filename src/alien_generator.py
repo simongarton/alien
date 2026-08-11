@@ -252,6 +252,7 @@ def _place_eyes(
     return consumed
 
 
+MIN_LIMB_LENGTH = 2
 MAX_LIMB_LENGTH = 5
 
 
@@ -289,6 +290,52 @@ def _select_limb_columns(half: list[int], width: int, pairs_needed: int) -> list
     return chosen
 
 
+def _paint_limb(
+    grid: list[list[str]], col: int, edge: int, length: int, color: str, grow_down: bool, height: int
+) -> None:
+    for depth in range(1, length + 1):
+        row = edge + depth if grow_down else edge - depth
+        if 0 <= row < height:
+            grid[row][col] = color
+
+
+def _place_limbs(
+    grid: list[list[str]],
+    width: int,
+    height: int,
+    edge_by_col: dict[int, int],
+    chosen_cols: list[int],
+    count: int,
+    color: str,
+    grow_down: bool,
+) -> None:
+    """Paint up to `count` limbs from chosen_cols. A limb and its mirror are
+    always added together (or, for a column on the centre line, as a single
+    self-mirrored limb) so the result stays left-right symmetric, and a limb
+    is only drawn when there's room for at least MIN_LIMB_LENGTH pixels."""
+    remaining = count
+    for col in chosen_cols:
+        if remaining <= 0:
+            break
+        mirror_col = width - 1 - col
+        edge = edge_by_col[col]
+        available = height - 1 - edge if grow_down else edge
+        max_len = min(MAX_LIMB_LENGTH, available)
+        if max_len < MIN_LIMB_LENGTH:
+            continue
+        unit = 1 if mirror_col == col else 2
+        if unit > remaining:
+            continue
+
+        length = random.randint(MIN_LIMB_LENGTH, max_len)
+        _paint_limb(grid, col, edge, length, color, grow_down, height)
+        remaining -= 1
+        if mirror_col != col:
+            mirror_edge = edge_by_col.get(mirror_col, edge)
+            _paint_limb(grid, mirror_col, mirror_edge, length, color, grow_down, height)
+            remaining -= 1
+
+
 def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, height: int, legs: int, color: str) -> None:
     if legs <= 0 or not mask:
         return
@@ -306,28 +353,7 @@ def _add_legs(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
 
     pairs_needed = (legs + 1) // 2
     chosen = _select_limb_columns(half, width, pairs_needed)
-
-    placed = 0
-    for col in chosen:
-        if placed >= legs:
-            break
-        bottom = body_bottom_by_col[col]
-        # Both sides of a mirrored pair share the same random length, since their
-        # body_bottom is identical (the mask is already left-right symmetric).
-        max_len = min(MAX_LIMB_LENGTH, height - 1 - bottom)
-        length = random.randint(1, max_len) if max_len > 0 else 0
-        for depth in range(1, length + 1):
-            grid[bottom + depth][col] = color
-        mirror_col = width - 1 - col
-        placed += 1
-        if placed >= legs and mirror_col == col:
-            break
-        if mirror_col != col and placed < legs:
-            mirror_bottom = body_bottom_by_col.get(mirror_col, bottom)
-            for depth in range(1, length + 1):
-                if mirror_bottom + depth < height:
-                    grid[mirror_bottom + depth][mirror_col] = color
-            placed += 1
+    _place_limbs(grid, width, height, body_bottom_by_col, chosen, legs, color, grow_down=True)
 
 
 def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]], width: int, height: int, arms: int, color: str) -> None:
@@ -347,28 +373,7 @@ def _add_arms(grid: list[list[str]], mask: set[tuple[int, int]], width: int, hei
 
     pairs_needed = (arms + 1) // 2
     chosen = _select_limb_columns(half, width, pairs_needed)
-
-    placed = 0
-    for col in chosen:
-        if placed >= arms:
-            break
-        top = body_top_by_col[col]
-        # Both sides of a mirrored pair share the same random length, since their
-        # body_top is identical (the mask is already left-right symmetric).
-        max_len = min(MAX_LIMB_LENGTH, top)
-        length = random.randint(1, max_len) if max_len > 0 else 0
-        for depth in range(1, length + 1):
-            grid[top - depth][col] = color
-        mirror_col = width - 1 - col
-        placed += 1
-        if placed >= arms:
-            break
-        if mirror_col != col:
-            mirror_top = body_top_by_col.get(mirror_col, top)
-            for depth in range(1, length + 1):
-                if mirror_top - depth >= 0:
-                    grid[mirror_top - depth][mirror_col] = color
-            placed += 1
+    _place_limbs(grid, width, height, body_top_by_col, chosen, arms, color, grow_down=False)
 
 
 def generate_alien(
