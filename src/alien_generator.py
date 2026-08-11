@@ -386,8 +386,7 @@ def generate_alien(
     consumed = _place_eyes(grid, mask, width, height, eyes, bigeyes)
     feature_mask = mask - consumed
 
-    limb_color = random.choice(colors)
-    _add_legs(grid, feature_mask, width, height, legs, limb_color)
-    _add_arms(grid, feature_mask, width, height, arms, limb_color)
+    _add_legs(grid, feature_mask, width, height, legs, body_color)
+    _add_arms(grid, feature_mask, width, height, arms, body_color)
 
     return grid
