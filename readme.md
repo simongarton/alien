@@ -65,6 +65,10 @@ This is from a 16x16 grid using the full color palette and randomizing most othe
 
 ![Examples](images/full_color_examples.png)
 
+### Screensaver
+
+![Screensaver](images/laptop.jpg)
+
 ## Next steps
 
 ### Better aliens
@@ -73,8 +77,22 @@ I'm not 100% happy yet, but need to look at more examples to figure out the rule
 
 ### LED matrix display
 
-How am I going to do this ?
+How am I going to do this ? I have Pi Hats ready, let's do one of those on a Zero. Actually, I think I also have a 16x16 Arduino - but that won't run Python. Can I get Claude to convert it ?
 
 ### API
 
 Create and publish to AWS a rate-limited / API key protected API that will return a random image. Pass the DNA as query parameters.
+
+### Small sizes
+
+LED matrices are often 8x8 and would look like this:
+
+![8x8](images/8x8_examples.png)
+
+These are OK-ish. I'm forcing big eyes
+
+## Bugs
+
+### Sometimes no eyes
+
+The code is sensibly not creating any eyes if there's no room. Should I just fail to create an alien at this point ?

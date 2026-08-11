@@ -7,11 +7,14 @@ if __name__ == "__main__":
     count = int(input("How many aliens would you like to generate? "))
 
     palette = random.choice(["green", "blue", "red", "cga", "full"])
-    width = 16 # random.randint(16, 32)
+    width = random.randint(8, 32)
     height = width # random.randint(16, 32)
     background = "#ffffff"
+    background = "#000000"
 
     for i in range(count):
+        # width = random.randint(8, 24)
+        # height = width # random.randint(16, 32)
         eyes = random.randint(1, 4)
         bigeyes = random.choice(["true", "false"])
         legs = random.randint(1, 4)
