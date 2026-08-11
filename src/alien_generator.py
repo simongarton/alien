@@ -120,6 +120,21 @@ def _symmetric_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]
     return result
 
 
+def _eroded_mask(mask: set[tuple[int, int]], size: int) -> set[tuple[int, int]]:
+    """Top-left positions where a size x size block, plus a 1-pixel margin all the
+    way round it, lies entirely within mask -- i.e. where a block can be placed
+    without touching a background cell."""
+    safe = set()
+    for r, c in mask:
+        if all(
+            (r + dr, c + dc) in mask
+            for dr in range(-1, size + 1)
+            for dc in range(-1, size + 1)
+        ):
+            safe.add((r, c))
+    return safe
+
+
 def _place_eyes(
     grid: list[list[str]],
     mask: set[tuple[int, int]],
@@ -128,41 +143,88 @@ def _place_eyes(
     eyes: int,
     bigeyes: bool,
 ) -> set[tuple[int, int]]:
-    """Paint eyes onto the grid, symmetric about the vertical centre line.
-    Returns the set of cells consumed by eyes, so other features avoid them."""
+    """Paint eyes onto the grid, symmetric about the vertical centre line. Eyes are
+    only ever placed where a ring of body colour surrounds them, so an eye never
+    touches the background directly. Returns the set of cells consumed by eyes,
+    so other features avoid them."""
     if not mask:
         return set()
 
-    body_rows = sorted({row for row, _ in mask})
-    eye_row = body_rows[max(0, len(body_rows) // 4)]
     cx = (width - 1) / 2
-    consumed = set()
+    body_rows = sorted({row for row, _ in mask})
+    target_row = body_rows[max(0, len(body_rows) // 4)]
 
     eye_size = 2 if bigeyes else 1
-    # Fit guard: degrade to single-pixel eyes if there isn't room for a 2x2 block.
-    if bigeyes and (eye_row + 1 >= height or width < 4):
+    safe = _eroded_mask(mask, eye_size)
+    if not safe and eye_size == 2:
+        # Fit guard: degrade to single-pixel eyes if there isn't room for a 2x2 block.
         eye_size = 1
         bigeyes = False
+        safe = _eroded_mask(mask, eye_size)
+    if not safe:
+        return set()
+
+    def mirror(col: int) -> int:
+        return width - eye_size - col
+
+    cols_by_row: dict[int, set[int]] = {}
+    for row, col in safe:
+        cols_by_row.setdefault(row, set()).add(col)
+    ordered_rows = sorted(cols_by_row, key=lambda row: (abs(row - target_row), row))
 
     pair_offset = max(1, int(width * 0.2))
-    left_col = round(cx - pair_offset)
-    right_col = width - 1 - left_col  # mirror of left_col, not independently rounded
-    # Centre "eye" spans both middle columns so it mirrors itself even when width
-    # is even (there is no single centre pixel): floor(cx) and ceil(cx) are always
-    # mirror images of each other, collapsing to one column when width is odd.
-    center_cols = sorted({width // 2 - (1 if width % 2 == 0 else 0), width // 2})
+    desired_left = cx - pair_offset
+    center_target = width / 2 - eye_size / 2
 
-    cols = [left_col, right_col]
-    if eyes == 3:
-        cols = center_cols + cols
+    def pick_pair(row_cols: set[int], desired: float, exclude: set[int]) -> tuple[int, int] | None:
+        candidates = []
+        for col in row_cols:
+            twin = mirror(col)
+            if twin not in row_cols or col > twin:
+                continue
+            block = set(range(col, col + eye_size)) | set(range(twin, twin + eye_size))
+            if block & exclude:
+                continue
+            candidates.append(col)
+        if not candidates:
+            return None
+        best = min(candidates, key=lambda col: abs(col - desired))
+        return best, mirror(best)
 
-    if eye_row + eye_size - 1 >= height:
-        return consumed
-
-    for col in cols:
-        if col < 0 or col + eye_size - 1 >= width:
+    eye_row = None
+    final_cols: list[int] = []
+    fallback: tuple[int, list[int]] | None = None
+    for row in ordered_rows:
+        row_cols = cols_by_row[row]
+        outer = pick_pair(row_cols, desired_left, set())
+        if outer is None:
             continue
+        left_col, right_col = outer
+        chosen = [left_col] if left_col == right_col else [left_col, right_col]
 
+        if eyes != 3:
+            eye_row, final_cols = row, chosen
+            break
+
+        occupied = set()
+        for col in chosen:
+            occupied.update(range(col, col + eye_size))
+        center = pick_pair(row_cols, center_target, occupied)
+        if center is not None:
+            cl, cr = center
+            center_cols = [cl] if cl == cr else [cl, cr]
+            eye_row, final_cols = row, center_cols + chosen
+            break
+        if fallback is None:
+            fallback = (row, chosen)
+
+    if eye_row is None:
+        if fallback is None:
+            return set()
+        eye_row, final_cols = fallback
+
+    consumed = set()
+    for col in final_cols:
         for dr in range(eye_size):
             for dc in range(eye_size):
                 r, c = eye_row + dr, col + dc
