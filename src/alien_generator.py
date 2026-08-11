@@ -53,38 +53,49 @@ def build_palette(name: str, background: str) -> list[str]:
     return colors
 
 
+WOBBLE_RANGE = (0.85, 1.05)
+
+
 def _body_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
     """Return the set of (row, col) cells inside the given shape, leaving room at the
-    bottom for legs and the top for arms sticking up."""
+    bottom for legs, the top for arms sticking up, and a border on all sides so the
+    body never touches the edge of the grid. Each row's width is nudged by a random
+    wobble factor so the silhouette isn't a perfectly clean shape."""
     top_margin = max(1, height // 8)
     bottom_margin = max(2, height // 4)
+    side_margin = max(1, width // 8)
     body_top = top_margin
     body_bottom = height - bottom_margin
+    body_left = side_margin
+    body_right = max(body_left + 1, width - side_margin)
     body_height = max(1, body_bottom - body_top)
+    body_width = max(1, body_right - body_left)
 
-    cx = (width - 1) / 2
+    cx = (body_left + body_right - 1) / 2
     cy = body_top + (body_height - 1) / 2
-    rx = width / 2
+    rx = body_width / 2
     ry = body_height / 2
 
     mask = set()
     for row in range(body_top, body_bottom):
-        for col in range(width):
-            dx = (col - cx) / rx if rx else 0
+        wobble = random.uniform(*WOBBLE_RANGE)
+        row_rx = rx * wobble
+        for col in range(body_left, body_right):
+            dx = (col - cx) / row_rx if row_rx else 0
             dy = (row - cy) / ry if ry else 0
             if shape == "circle":
                 inside = dx * dx + dy * dy <= 1.0
             elif shape == "oval":
                 inside = (dx * dx) / 1.0 + (dy * dy) / 0.6 <= 1.0
             elif shape == "square":
-                inside = True
+                inside = abs(col - cx) <= row_rx
             elif shape == "triangle":
                 row_ratio = (row - body_top) / max(body_height - 1, 1)
-                half_width = row_ratio * rx
+                half_width = row_ratio * row_rx
                 inside = abs(col - cx) <= half_width
             elif shape == "triangle_inverted":
                 row_ratio = (row - body_top) / max(body_height - 1, 1)
-                half_width = (1 - row_ratio) * rx
+                half_width = (1 - row_ratio) * row_rx
                 inside = abs(col - cx) <= half_width
             else:
                 raise ValueError(f"Unknown shape: {shape}")
