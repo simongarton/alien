@@ -1,7 +1,13 @@
 """Main application window: File menu with New / Open / Exit."""
 
 from PySide6.QtGui import QAction, QCloseEvent
-from PySide6.QtWidgets import QMainWindow, QMessageBox
+from PySide6.QtWidgets import QDialog, QMainWindow, QMessageBox
+
+from alien_generator import build_palette
+
+from .alien_io import new_grid
+from .alien_window import AlienWindow
+from .new_alien_dialog import NewAlienDialog
 
 
 class MainWindow(QMainWindow):
@@ -9,6 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Alien Editor")
         self.resize(320, 240)
+        self.alien_windows: list[AlienWindow] = []
         self._build_menu()
 
     def _build_menu(self) -> None:
@@ -32,7 +39,21 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(self.exit_action)
 
     def _on_new(self) -> None:
-        QMessageBox.information(self, "New", "Not implemented yet.")
+        dialog = NewAlienDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        values = dialog.values()
+        try:
+            palette = build_palette(values["palette"], values["background"])
+        except ValueError as exc:
+            QMessageBox.warning(self, "New", str(exc))
+            return
+
+        grid = new_grid(values["width"], values["height"], values["background"])
+        window = AlienWindow(grid=grid, palette=palette, background=values["background"])
+        self.alien_windows.append(window)
+        window.show()
 
     def _on_open(self) -> None:
         QMessageBox.information(self, "Open", "Not implemented yet.")
