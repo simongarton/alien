@@ -79,12 +79,13 @@ def test_double_click_with_invalid_color_leaves_palette_unchanged(qtbot, monkeyp
 
 
 def test_double_click_does_not_change_already_painted_cells(qtbot, monkeypatch):
-    from gui.alien_window import AlienWindow
+    from gui.main_window import MainWindow
     from gui.pixel_grid import CELL_SIZE
 
     grid = [["#FFFFFF"]]
-    window = AlienWindow(grid=grid, palette=["#FF0000", "#00FF00"], background="#FFFFFF")
+    window = MainWindow()
     qtbot.addWidget(window)
+    window._load_alien(grid, ["#FF0000", "#00FF00"], "#FFFFFF")
 
     center = QPoint(CELL_SIZE // 2, CELL_SIZE // 2)
     qtbot.mouseClick(window.pixel_grid, Qt.MouseButton.LeftButton, pos=center)
