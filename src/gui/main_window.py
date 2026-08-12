@@ -75,6 +75,8 @@ class MainWindow(QMainWindow):
         self.alien_windows.append(window)
         window.destroyed.connect(lambda: self._forget_alien_window(window))
         window.show()
+        window.raise_()
+        window.activateWindow()
 
     def _forget_alien_window(self, window: AlienWindow) -> None:
         if window in self.alien_windows:
