@@ -40,3 +40,19 @@ def save_alien(path: str, grid: list[list[str]]) -> None:
 def new_grid(width: int, height: int, background: str) -> list[list[str]]:
     """Create a blank grid filled with the background colour."""
     return [[background for _ in range(width)] for _ in range(height)]
+
+
+def derive_palette_and_background(grid: list[list[str]]) -> tuple[list[str], str]:
+    """Derive a paintable palette and background colour for a loaded grid, which
+    carries neither explicitly: the background is the most common colour, and the
+    palette is every other distinct colour, in order of first appearance."""
+    counts: dict[str, int] = {}
+    for row in grid:
+        for cell in row:
+            counts[cell] = counts.get(cell, 0) + 1
+
+    background = max(counts, key=counts.get)
+    palette = [color for color in counts if color != background]
+    if not palette:
+        palette = [background]
+    return palette, background

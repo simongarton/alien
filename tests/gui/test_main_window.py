@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
+from gui.alien_io import save_alien
 from gui.alien_window import AlienWindow
 from gui.main_window import MainWindow
 from gui.new_alien_dialog import NewAlienDialog
@@ -48,15 +49,53 @@ def test_new_does_nothing_when_cancelled(qtbot, monkeypatch):
     assert window.alien_windows == []
 
 
-def test_open_action_shows_placeholder_message(qtbot, monkeypatch):
+def test_open_creates_alien_window_from_json_file(qtbot, monkeypatch, tmp_path):
+    grid = [["#FFFFFF", "#FF0000"], ["#FFFFFF", "#FFFFFF"]]
+    path = tmp_path / "alien.json"
+    save_alien(str(path), grid)
+
     window = MainWindow()
     qtbot.addWidget(window)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args, **kwargs: (str(path), ""))
+
+    window.open_action.trigger()
+
+    assert len(window.alien_windows) == 1
+    alien_window = window.alien_windows[0]
+    assert alien_window.grid == grid
+    assert alien_window.path == str(path)
+    assert alien_window.background == "#FFFFFF"
+    assert alien_window.palette == ["#FF0000"]
+    assert "alien.json" in alien_window.windowTitle()
+    alien_window.close()
+
+
+def test_open_does_nothing_when_cancelled(qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args, **kwargs: ("", ""))
+
+    window.open_action.trigger()
+
+    assert window.alien_windows == []
+
+
+def test_open_shows_warning_for_invalid_file(qtbot, monkeypatch, tmp_path):
+    path = tmp_path / "broken.json"
+    path.write_text("not valid json")
+
+    window = MainWindow()
+    qtbot.addWidget(window)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args, **kwargs: (str(path), ""))
     shown = {}
     monkeypatch.setattr(
-        QMessageBox, "information", lambda *args, **kwargs: shown.setdefault("called", True)
+        QMessageBox, "warning", lambda *args, **kwargs: shown.setdefault("called", True)
     )
+
     window.open_action.trigger()
+
     assert shown.get("called") is True
+    assert window.alien_windows == []
 
 
 def test_close_confirmed_accepts(qtbot, monkeypatch):

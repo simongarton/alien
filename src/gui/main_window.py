@@ -1,13 +1,15 @@
 """Main application window: File menu with New / Open / Exit."""
 
 from PySide6.QtGui import QAction, QCloseEvent
-from PySide6.QtWidgets import QDialog, QMainWindow, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
 
 from alien_generator import build_palette
 
-from .alien_io import new_grid
+from .alien_io import derive_palette_and_background, load_alien, new_grid
 from .alien_window import AlienWindow
 from .new_alien_dialog import NewAlienDialog
+
+OPEN_FILE_FILTER = "Alien files (*.json *.txt)"
 
 
 class MainWindow(QMainWindow):
@@ -56,7 +58,20 @@ class MainWindow(QMainWindow):
         window.show()
 
     def _on_open(self) -> None:
-        QMessageBox.information(self, "Open", "Not implemented yet.")
+        path, _ = QFileDialog.getOpenFileName(self, "Open Alien", "", OPEN_FILE_FILTER)
+        if not path:
+            return
+
+        try:
+            grid = load_alien(path)
+        except (OSError, ValueError, KeyError, IndexError) as exc:
+            QMessageBox.warning(self, "Open", f"Could not open {path}:\n{exc}")
+            return
+
+        palette, background = derive_palette_and_background(grid)
+        window = AlienWindow(grid=grid, palette=palette, background=background, path=path)
+        self.alien_windows.append(window)
+        window.show()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         reply = QMessageBox.question(

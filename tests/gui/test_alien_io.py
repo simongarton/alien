@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from gui.alien_io import load_alien, new_grid, save_alien
+from gui.alien_io import derive_palette_and_background, load_alien, new_grid, save_alien
 
 
 def test_new_grid_dimensions_and_fill():
@@ -68,3 +68,34 @@ def test_save_unsupported_extension_raises(tmp_path):
 
     with pytest.raises(ValueError):
         save_alien(str(path), [["#000000"]])
+
+
+def test_derive_picks_most_common_color_as_background():
+    grid = [
+        ["#FFFFFF", "#FFFFFF", "#FF0000"],
+        ["#FFFFFF", "#00FF00", "#FFFFFF"],
+    ]
+    palette, background = derive_palette_and_background(grid)
+    assert background == "#FFFFFF"
+    assert set(palette) == {"#FF0000", "#00FF00"}
+
+
+def test_derive_excludes_background_from_palette():
+    grid = [["#000000", "#000000", "#FFFFFF"]]
+    palette, background = derive_palette_and_background(grid)
+    assert background == "#000000"
+    assert "#000000" not in palette
+
+
+def test_derive_falls_back_to_background_only_palette_for_uniform_grid():
+    grid = [["#123456", "#123456"], ["#123456", "#123456"]]
+    palette, background = derive_palette_and_background(grid)
+    assert background == "#123456"
+    assert palette == ["#123456"]
+
+
+def test_derive_palette_order_matches_first_appearance():
+    grid = [["#FFFFFF", "#00FF00", "#0000FF"], ["#FF0000", "#FFFFFF", "#FFFFFF"]]
+    palette, background = derive_palette_and_background(grid)
+    assert background == "#FFFFFF"
+    assert palette == ["#00FF00", "#0000FF", "#FF0000"]
