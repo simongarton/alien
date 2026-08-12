@@ -6,7 +6,7 @@ from pathlib import Path
 from alien_json_to_text import alien_json_to_text
 from alien_text_to_json import alien_text_to_json
 
-SUPPORTED_EXTENSIONS = (".json", ".txt")
+SUPPORTED_EXTENSIONS = (".txt", ".json")
 
 
 def load_alien(path: str) -> list[list[str]]:

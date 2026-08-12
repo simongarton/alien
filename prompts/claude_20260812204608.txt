@@ -1,0 +1,141 @@
+[user]
+In the file dialogs, JSON is showing up first. I want the Text format to be first.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: (Bash completed with no output)]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result:       58 /Users/simongarton/projects/python/alien/src/gui/alien_io.py
+ src/gui/alien_io.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""Qt-free load/save helpers for the GUI, dispatching on file extension."""
+2	
+3	import json
+4	from pathlib import Path
+5	
+6	from alien_json_to_text import alien_json_to_text
+7	from alien_text_to_json import alien_text_to_json
+8	
+9	SUPPORTED_EXTENSIONS = (".txt", ".json")
+10	
+11	
+12	def load_alien(path: str) -> list[list[str]]:
+13	    """Load an alien grid from a .json or .txt file."""
+14	    suffix = Path(path).suffix.lower()
+15	    if suffix == ".json":
+16	        with open(path) as f:
+17	  ]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: /Users/simongarton/projects/python/alien/src/gui/main_window.py]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: 10:    QFileDialog,
+26:SAVE_FILE_FILTER = "JSON files (*.json);;Text files (*.txt)"
+176:        path, _ = QFileDialog.getOpenFileName(self, "Open Alien", "", OPEN_FILE_FILTER)
+254:        filename, selected_filter = QFileDialog.getSaveFileName(
+261:            filename += ".json" if "json" in selected_filter.lower() else ".txt"]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: 25:OPEN_FILE_FILTER = "Alien files (*.json *.txt)"
+26:SAVE_FILE_FILTER = "JSON files (*.json);;Text files (*.txt)"
+176:        path, _ = QFileDialog.getOpenFileName(self, "Open Alien", "", OPEN_FILE_FILTER)
+255:            self, "Save Alien As", self.path or "", SAVE_FILE_FILTER]
+
+[assistant]
+The Save dialog's filter list is `"JSON files (*.json);;Text files (*.txt)"` in `src/gui/main_window.py:26` — the order in that string determines which shows first. I'll swap it so Text is first.
+
+[assistant]
+[tool call: Edit]
+
+[user]
+[tool result: The file /Users/simongarton/projects/python/alien/src/gui/main_window.py has been updated successfully. (file state is current in your context — no need to Read it back)]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: I001 [*] Import block is un-sorted or un-formatted
+ --> src/batch.py:1:1
+  |
+1 | / import random
+2 | | from alien_generator import generate_alien
+3 | | from image_painter import paint_image
+  | |_____________________________________^
+4 |
+5 |   if __name__ == "__main__":
+  |
+help: Organize imports
+  |
+1 | import random
+2 +
+3 | from alien_generator import generate_alien
+  |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.]
+
+[assistant]
+That warning is pre-existing and unrelated to this change (`src/batch.py`), so no fix needed here.
+
+Now, was there a preexisting unrelated diff on `src/gui/alien_io.py`? Let me check.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: diff --git a/src/gui/alien_io.py b/src/gui/alien_io.py
+index 4de3021..c124d8a 100644
+--- a/src/gui/alien_io.py
++++ b/src/gui/alien_io.py
+@@ -6,7 +6,7 @@ from pathlib import Path
+ from alien_json_to_text import alien_json_to_text
+ from alien_text_to_json import alien_text_to_json
+ 
+-SUPPORTED_EXTENSIONS = (".json", ".txt")
++SUPPORTED_EXTENSIONS = (".txt", ".json")
+ 
+ 
+ def load_alien(path: str) -> list[list[str]]:]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: Exit code 1
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    import main_window
+  File "/Users/simongarton/projects/python/alien/src/gui/main_window.py", line 20, in <module>
+    from .alien_io import derive_palette_and_background, load_alien, new_grid, save_alien
+ImportError: attempted relative import with no known parent package]
+
+[assistant]
+Not worth fighting the import path for a one-line string check — the edit is straightforward. Change made: in `src/gui/main_window.py:26`, the Save dialog filter order is now `"Text files (*.txt);;JSON files (*.json)"`, so Text shows first (Open dialog uses a single combined filter, unaffected). The pre-existing unstaged change to `alien_io.py`'s `SUPPORTED_EXTENSIONS` order is consistent with this and untouched.
+
+[user]
+rciy
+
+[assistant]
+I don't recognize "rciy" — could you clarify what you'd like me to do?
+

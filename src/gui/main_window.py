@@ -23,7 +23,7 @@ from .palette_widget import PaletteWidget
 from .pixel_grid import PixelGridWidget
 
 OPEN_FILE_FILTER = "Alien files (*.json *.txt)"
-SAVE_FILE_FILTER = "JSON files (*.json);;Text files (*.txt)"
+SAVE_FILE_FILTER = "Text files (*.txt);;JSON files (*.json)"
 
 
 class MainWindow(QMainWindow):
