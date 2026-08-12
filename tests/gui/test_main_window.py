@@ -70,6 +70,25 @@ def test_open_creates_alien_window_from_json_file(qtbot, monkeypatch, tmp_path):
     alien_window.close()
 
 
+def test_closing_alien_window_removes_it_from_tracking_list(qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    monkeypatch.setattr(NewAlienDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(
+        NewAlienDialog,
+        "values",
+        lambda self: {"width": 2, "height": 2, "palette": "cga", "background": "#FFFFFF"},
+    )
+
+    window.new_action.trigger()
+    assert len(window.alien_windows) == 1
+    alien_window = window.alien_windows[0]
+
+    alien_window.close()
+
+    qtbot.waitUntil(lambda: window.alien_windows == [], timeout=1000)
+
+
 def test_open_does_nothing_when_cancelled(qtbot, monkeypatch):
     window = MainWindow()
     qtbot.addWidget(window)

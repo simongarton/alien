@@ -54,8 +54,7 @@ class MainWindow(QMainWindow):
 
         grid = new_grid(values["width"], values["height"], values["background"])
         window = AlienWindow(grid=grid, palette=palette, background=values["background"])
-        self.alien_windows.append(window)
-        window.show()
+        self._register_alien_window(window)
 
     def _on_open(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Open Alien", "", OPEN_FILE_FILTER)
@@ -70,8 +69,16 @@ class MainWindow(QMainWindow):
 
         palette, background = derive_palette_and_background(grid)
         window = AlienWindow(grid=grid, palette=palette, background=background, path=path)
+        self._register_alien_window(window)
+
+    def _register_alien_window(self, window: AlienWindow) -> None:
         self.alien_windows.append(window)
+        window.destroyed.connect(lambda: self._forget_alien_window(window))
         window.show()
+
+    def _forget_alien_window(self, window: AlienWindow) -> None:
+        if window in self.alien_windows:
+            self.alien_windows.remove(window)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         reply = QMessageBox.question(
