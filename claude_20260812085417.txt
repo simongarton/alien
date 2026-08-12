@@ -1,6 +1,0 @@
-[user]
-Checking ?
-
-[assistant]
-Could you clarify what you'd like me to check? Your message just says "Checking ?" — is there a specific file, feature, or issue in the alien project you want me to look at?
-

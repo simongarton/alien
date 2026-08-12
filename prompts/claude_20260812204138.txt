@@ -1,0 +1,424 @@
+[user]
+When the app starts, there is an empty window titled Alien Editor. What is this for and is it needed ?
+
+[assistant]
+I'll look into the codebase to find where the Alien Editor window is defined and what it's meant to do.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: /Users/simongarton/projects/python/alien/src/claude_20260812203053.txt:1130:window title: Alien Editor
+/Users/simongarton/projects/python/alien/src/claude_20260812203053.txt:1357:10	        self.setWindowTitle("Alien Editor")
+/Users/simongarton/projects/python/alien/src/claude_20260812203053.txt:1375:9	    assert window.windowTitle() == "Alien Editor"
+/Users/simongarton/projects/python/alien/src/claude_20260812203053.txt:1586:title: Untitled - Alien Editor
+/Users/simongarton/projects/python/alie]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""Main application window: File menu with New / Open / Exit."""
+2	
+3	from PySide6.QtGui import QAction, QCloseEvent
+4	from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
+5	
+6	from alien_generator import build_palette
+7	
+8	from .alien_io import derive_palette_and_background, load_alien, new_grid
+9	from .alien_window import AlienWindow
+10	from .new_alien_dialog import NewAlienDialog
+11	
+12	OPEN_FILE_FILTER = "Alien files (*.json *.txt)"
+13	
+14	
+15	class MainWindow(QMain]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""Entry point for the Alien Editor GUI application."""
+2	
+3	import sys
+4	
+5	from PySide6.QtWidgets import QApplication
+6	
+7	from .main_window import MainWindow
+8	
+9	
+10	def main() -> int:
+11	    app = QApplication(sys.argv)
+12	    window = MainWindow()
+13	    window.show()
+14	    return app.exec()
+15	
+16	
+17	if __name__ == "__main__":
+18	    sys.exit(main())
+19	]
+
+[assistant]
+That empty "Alien Editor" window is `MainWindow` (`src/gui/main_window.py`) — it's the app's launcher/root window, shown on startup with just a `File` menu (New / Open / Exit). It intentionally has no content of its own: it exists to create/track child `AlienWindow` instances (the actual editors that hold a grid/palette/background), and its `closeEvent` handler is what confirms "Exit" and cascades closing all open `AlienWindow`s.
+
+So it is needed as the app's entry point and exit-coordination point — it's not a leftover or a bug, just a minimal, content-less launcher window (title-and-menu-bar-only), by design, similar to how some multi-document apps have a blank primary shell.
+
+One thing worth flagging: `src/claude_20260812203053.txt` is an untracked file sitting in `src/` (shows up in `git status`) — looks like an accidentally-saved session transcript rather than app code. Want me to remove it, or is that intentional?
+
+[user]
+If I wanted to go to a single window app, what would be involved ?
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""A window for editing a single alien: File > Save / Save As / Close."""
+2	
+3	from pathlib import Path
+4	
+5	from PySide6.QtCore import Qt
+6	from PySide6.QtGui import QAction, QCloseEvent
+7	from PySide6.QtWidgets import (
+8	    QFileDialog,
+9	    QHBoxLayout,
+10	    QMainWindow,
+11	    QMessageBox,
+12	    QWidget,
+13	)
+14	
+15	from alien_generator import generate_alien
+16	
+17	from .alien_io import save_alien
+18	from .palette_widget import PaletteWidget
+19	from .pixel_grid import PixelGridWidget]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: __init__.py
+__pycache__
+alien_io.py
+alien_window.py
+app.py
+main_window.py
+new_alien_dialog.py
+palette_widget.py
+pixel_grid.py
+__pycache__
+conftest.py
+gui
+test_alien_generator.py
+test_alien_json_to_text.py
+test_alien_text_to_json.py
+test_image_painter.py]
+
+[assistant]
+Merge `MainWindow` and `AlienWindow` into one class: the single window would own the File menu (New/Open/Save/Save As/Generate/Exit) and swap its central widget's grid/palette/background/path/dirty state in place instead of spawning a new `AlienWindow`. The main tradeoff is losing the ability to have multiple aliens open side-by-side for comparison — "New"/"Open" would need an unsaved-changes prompt (reusing the logic already in `AlienWindow.closeEvent`) before replacing the current one, and the `alien_windows` list/registration bookkeeping in `MainWindow` goes away entirely.
+
+Want me to go ahead and implement that merge?
+
+[user]
+Implement the merge, but do not commit until I have tested it manually.
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""Qt-free load/save helpers for the GUI, dispatching on file extension."""
+2	
+3	import json
+4	from pathlib import Path
+5	
+6	from alien_json_to_text import alien_json_to_text
+7	from alien_text_to_json import alien_text_to_json
+8	
+9	SUPPORTED_EXTENSIONS = (".json", ".txt")
+10	
+11	
+12	def load_alien(path: str) -> list[list[str]]:
+13	    """Load an alien grid from a .json or .txt file."""
+14	    suffix = Path(path).suffix.lower()
+15	    if suffix == ".json":
+16	        with open(path) as f:
+17	  ]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""Dialog for the File > New action: width, height, palette, background."""
+2	
+3	from PySide6.QtGui import QColor
+4	from PySide6.QtWidgets import (
+5	    QColorDialog,
+6	    QComboBox,
+7	    QDialog,
+8	    QDialogButtonBox,
+9	    QFormLayout,
+10	    QPushButton,
+11	    QSpinBox,
+12	    QVBoxLayout,
+13	    QWidget,
+14	)
+15	
+16	from alien_generator import SHADE_PALETTES
+17	
+18	PALETTE_NAMES = ["cga", *SHADE_PALETTES.keys(), "full"]
+19	DEFAULT_BACKGROUND = "#FFFFFF"
+20	
+21	
+22	class ColorButton(Q]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: __pycache__
+test_alien_io.py
+test_alien_window.py
+test_main_window.py
+test_new_alien_dialog.py
+test_palette_widget.py
+test_pixel_grid.py]
+
+[assistant]
+[tool call: Read]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	import json
+2	
+3	from PySide6.QtCore import QPoint, Qt
+4	from PySide6.QtWidgets import QFileDialog, QMessageBox
+5	
+6	from gui import alien_window as alien_window_module
+7	from gui.alien_window import AlienWindow
+8	from gui.palette_widget import SWATCH_SIZE, PaletteWidget
+9	from gui.pixel_grid import CELL_SIZE, PixelGridWidget
+10	
+11	
+12	def test_window_title_for_untitled_alien(qtbot):
+13	    grid = [["#FFFFFF"]]
+14	    window = AlienWindow(grid=grid, palette=["#FF0000"], background="#FFFFFF")
+]
+
+[user]
+[tool result: 1	from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
+2	
+3	from gui.alien_io import save_alien
+4	from gui.alien_window import AlienWindow
+5	from gui.main_window import MainWindow
+6	from gui.new_alien_dialog import NewAlienDialog
+7	
+8	
+9	def test_window_title(qtbot):
+10	    window = MainWindow()
+11	    qtbot.addWidget(window)
+12	    assert window.windowTitle() == "Alien Editor"
+13	
+14	
+15	def test_file_menu_actions(qtbot):
+16	    window = MainWindow()
+17	    qtbot.addWidget(window)
+18]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""A clickable grid of alien pixels: click a cell to paint it, click again to erase."""
+2	
+3	from PySide6.QtCore import Signal
+4	from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+5	from PySide6.QtWidgets import QWidget
+6	
+7	CELL_SIZE = 20
+8	
+9	
+10	class PixelGridWidget(QWidget):
+11	    cell_changed = Signal()
+12	
+13	    def __init__(
+14	        self,
+15	        grid: list[list[str]],
+16	        background: str,
+17	        selected_color: str,
+18	        parent: QWidget | Non]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	"""A strip of colour swatches: click one to select it as the paint colour."""
+2	
+3	from PySide6.QtCore import Signal
+4	from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen
+5	from PySide6.QtWidgets import QColorDialog, QWidget
+6	
+7	SWATCH_SIZE = 24
+8	
+9	
+10	class PaletteWidget(QWidget):
+11	    color_selected = Signal(str)
+12	
+13	    def __init__(self, palette: list[str], parent: QWidget | None = None) -> None:
+14	        super().__init__(parent)
+15	        self.palette = p]
+
+[assistant]
+Now I'll write the merged single-window implementation.
+
+[assistant]
+[tool call: Write]
+
+[user]
+[tool result: The file /Users/simongarton/projects/python/alien/src/gui/main_window.py has been updated successfully. (file state is current in your context — no need to Read it back)]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: /Users/simongarton/projects/python/alien/src/gui/alien_window.py
+/Users/simongarton/projects/python/alien/tests/gui/test_main_window.py
+/Users/simongarton/projects/python/alien/tests/gui/test_palette_widget.py
+/Users/simongarton/projects/python/alien/tests/gui/test_alien_window.py]
+
+[assistant]
+[tool call: Read]
+
+[user]
+[tool result: 1	from PySide6.QtCore import QPoint, Qt
+2	from PySide6.QtGui import QColor
+3	from PySide6.QtWidgets import QColorDialog
+4	
+5	from gui.palette_widget import SWATCH_SIZE, PaletteWidget
+6	
+7	
+8	def _center(index: int) -> QPoint:
+9	    return QPoint(SWATCH_SIZE // 2, index * SWATCH_SIZE + SWATCH_SIZE // 2)
+10	
+11	
+12	def test_widget_size_matches_palette_length(qtbot):
+13	    palette = ["#FF0000", "#00FF00", "#0000FF"]
+14	    widget = PaletteWidget(palette)
+15	    qtbot.addWidget(widget)
+16	    asser]
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: (Bash completed with no output)]
+
+[assistant]
+[tool call: Edit]
+
+[user]
+[tool result: The file /Users/simongarton/projects/python/alien/tests/gui/test_palette_widget.py has been updated successfully. (file state is current in your context — no need to Read it back)]
+
+[assistant]
+Now the main test file rewrite:
+
+[assistant]
+[tool call: Write]
+
+[user]
+[tool result: The file /Users/simongarton/projects/python/alien/tests/gui/test_main_window.py has been updated successfully. (file state is current in your context — no need to Read it back)]
+
+[assistant]
+Now let's run the tests and ruff.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: .........................................................                [100%]
+57 passed in 0.37s]
+
+[assistant]
+All GUI tests pass. Now the full suite and lint.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: ........................................................................ [ 85%]
+............                                                             [100%]
+84 passed in 0.41s
+---RUFF---
+I001 [*] Import block is un-sorted or un-formatted
+ --> src/batch.py:1:1
+  |
+1 | / import random
+2 | | from alien_generator import generate_alien
+3 | | from image_painter import paint_image
+  | |_____________________________________^
+4 |
+5 |   if __name__ == "__main__":
+  |
+help: Organize imports
+  |
+1 | impo]
+
+[assistant]
+That ruff warning is pre-existing in `src/batch.py`, unrelated to my changes. All tests pass and no new lint warnings from the merge.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result:  D src/gui/alien_window.py
+ M src/gui/main_window.py
+ D tests/gui/test_alien_window.py
+ M tests/gui/test_main_window.py
+ M tests/gui/test_palette_widget.py
+?? .DS_Store
+?? src/claude_20260812203053.txt
+?? zoo/green.txt]
+
+[assistant]
+Done — `AlienWindow` is gone, and `MainWindow` (`src/gui/main_window.py`) now owns everything: it starts with a placeholder ("No alien open...") and a disabled Save/Save As/Generate/Close, and New/Open load the alien directly into itself instead of spawning a second window.
+
+What to try manually (`uv run python -m gui.app` or however you normally launch it):
+- **New / Open** — grid + palette should appear in the single window; title updates to `Untitled - Alien Editor` or `<file> - Alien Editor`.
+- **Paint a cell, then New/Open again** — should prompt "Save changes before continuing?" (Save/Discard/Cancel) before replacing the current alien.
+- **File > Close** — same unsaved-changes prompt, then clears back to the placeholder state with Save/Save As/Generate/Close greyed out.
+- **Generate** — unchanged behavior, prompts only if the canvas isn't blank.
+- **Closing the window (titlebar X) / Ctrl+Q** — same unsaved-changes prompt now applies directly (I replaced the old generic "Are you sure you want to exit?" Yes/No with the same Save/Discard/Cancel dirty-check used everywhere else, since there's no longer a second window to reason about).
+
+All 84 tests pass and `ruff check` shows no new warnings (the one warning in `src/batch.py` predates this change). Let me know once you've tried it and I'll commit — and let me know if you'd rather keep the old "are you sure you want to exit?" confirmation in addition to the save-prompt, since I dropped it in favor of the simpler dirty-check.
+
+[user]
+Yeah, that's looking good. Commit it please.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: D  src/gui/alien_window.py
+M  src/gui/main_window.py
+D  tests/gui/test_alien_window.py
+M  tests/gui/test_main_window.py
+M  tests/gui/test_palette_widget.py
+?? .DS_Store
+?? src/claude_20260812203053.txt
+?? zoo/green.txt]
+
+[assistant]
+Staged only the merge-related files (leaving `.DS_Store`, the stray transcript file, and `zoo/green.txt` untouched). Committing now.
+
+[assistant]
+[tool call: Bash]
+
+[user]
+[tool result: [main 1b52ac8] Merge AlienWindow into MainWindow for a single-window editor
+ 5 files changed, 576 insertions(+), 591 deletions(-)
+ delete mode 100644 src/gui/alien_window.py
+ delete mode 100644 tests/gui/test_alien_window.py]
+
+[assistant]
+Committed as `1b52ac8`.
+
