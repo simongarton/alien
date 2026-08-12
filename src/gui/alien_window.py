@@ -2,8 +2,9 @@
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QMainWindow, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
+from .palette_widget import PaletteWidget
 from .pixel_grid import PixelGridWidget
 
 
@@ -25,9 +26,20 @@ class AlienWindow(QMainWindow):
 
         self.pixel_grid = PixelGridWidget(grid, background=background, selected_color=palette[0])
         self.pixel_grid.cell_changed.connect(self._on_cell_changed)
-        self.setCentralWidget(self.pixel_grid)
+
+        self.palette_widget = PaletteWidget(palette)
+        self.palette_widget.color_selected.connect(self._on_color_selected)
+
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.addWidget(self.pixel_grid)
+        layout.addWidget(self.palette_widget)
+        self.setCentralWidget(container)
 
         self._update_title()
+
+    def _on_color_selected(self, color: str) -> None:
+        self.pixel_grid.selected_color = color
 
     def _on_cell_changed(self) -> None:
         self.dirty = True
