@@ -24,15 +24,13 @@ I need an **Alien generator** script, call it `alien_generator.py`. This will ta
 
 I need an **Image painter** script, call it `image_painter.py`. This script will take the `JSON` object created by the generator, and use Pillow to create a `PNG` image of the alien. If a `filename` parameter is also passed in, use that to store the image; otherwise default to `alien.png`
 
-### body shape
+### Body shape
 
 Aliens can have an irregular but symmetrical shape which could be loosely based on a circle, oval, square or triangle (either normal or upside down.)
 
 ## Alien DNA
 
 All the DNA parameters will have a default.
-
-Aliens
 
 ### Descriptions
 
@@ -68,6 +66,14 @@ This is from a 16x16 grid using the full color palette and randomizing most othe
 ### Screensaver
 
 ![Screensaver](images/laptop.jpg)
+
+## GUI
+
+Claude has written me a little GUI to edit these files. I haven't tried it much, the basics seem to work.
+
+![GUI](images/gui.png)
+
+It has a small bug in the swatches - doesn't give me enough - but I don't yet know what the expected behaviour should be, so I haven't fixed it - and it's still usable.
 
 ## Next steps
 
