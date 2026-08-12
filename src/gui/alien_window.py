@@ -23,9 +23,14 @@ class AlienWindow(QMainWindow):
         self.path = path
         self.dirty = False
 
-        self.pixel_grid = PixelGridWidget(grid)
+        self.pixel_grid = PixelGridWidget(grid, background=background, selected_color=palette[0])
+        self.pixel_grid.cell_changed.connect(self._on_cell_changed)
         self.setCentralWidget(self.pixel_grid)
 
+        self._update_title()
+
+    def _on_cell_changed(self) -> None:
+        self.dirty = True
         self._update_title()
 
     def _update_title(self) -> None:
