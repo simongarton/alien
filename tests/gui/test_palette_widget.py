@@ -1,4 +1,6 @@
 from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QColorDialog
 
 from gui.palette_widget import SWATCH_SIZE, PaletteWidget
 
@@ -49,3 +51,47 @@ def test_click_selects_swatch_and_emits_signal(qtbot):
     assert widget.selected_index == 2
     assert widget.selected_color() == "#0000FF"
     assert blocker.args == ["#0000FF"]
+
+
+def test_double_click_redefines_the_swatch_color(qtbot, monkeypatch):
+    palette = ["#FF0000", "#00FF00", "#0000FF"]
+    widget = PaletteWidget(palette)
+    qtbot.addWidget(widget)
+    monkeypatch.setattr(QColorDialog, "getColor", lambda *args, **kwargs: QColor("#ABCDEF"))
+
+    with qtbot.waitSignal(widget.color_selected, timeout=1000) as blocker:
+        qtbot.mouseDClick(widget, Qt.MouseButton.LeftButton, pos=_center(1))
+
+    assert widget.palette[1] == "#ABCDEF"
+    assert widget.selected_index == 1
+    assert blocker.args == ["#ABCDEF"]
+
+
+def test_double_click_with_invalid_color_leaves_palette_unchanged(qtbot, monkeypatch):
+    palette = ["#FF0000", "#00FF00", "#0000FF"]
+    widget = PaletteWidget(palette)
+    qtbot.addWidget(widget)
+    monkeypatch.setattr(QColorDialog, "getColor", lambda *args, **kwargs: QColor())
+
+    qtbot.mouseDClick(widget, Qt.MouseButton.LeftButton, pos=_center(1))
+
+    assert widget.palette == ["#FF0000", "#00FF00", "#0000FF"]
+
+
+def test_double_click_does_not_change_already_painted_cells(qtbot, monkeypatch):
+    from gui.alien_window import AlienWindow
+    from gui.pixel_grid import CELL_SIZE
+
+    grid = [["#FFFFFF"]]
+    window = AlienWindow(grid=grid, palette=["#FF0000", "#00FF00"], background="#FFFFFF")
+    qtbot.addWidget(window)
+
+    center = QPoint(CELL_SIZE // 2, CELL_SIZE // 2)
+    qtbot.mouseClick(window.pixel_grid, Qt.MouseButton.LeftButton, pos=center)
+    assert window.grid[0][0] == "#FF0000"
+
+    monkeypatch.setattr(QColorDialog, "getColor", lambda *args, **kwargs: QColor("#123456"))
+    qtbot.mouseDClick(window.palette_widget, Qt.MouseButton.LeftButton, pos=_center(0))
+
+    assert window.grid[0][0] == "#FF0000"
+    assert window.pixel_grid.selected_color == "#123456"

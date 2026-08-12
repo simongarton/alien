@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPen
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QColorDialog, QWidget
 
 SWATCH_SIZE = 24
 
@@ -33,6 +33,17 @@ class PaletteWidget(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         index = int(event.position().y()) // SWATCH_SIZE
+        self.selected_index = index
+        self.update()
+        self.color_selected.emit(self.palette[index])
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        index = int(event.position().y()) // SWATCH_SIZE
+        chosen = QColorDialog.getColor(QColor(self.palette[index]), self, "Choose colour")
+        if not chosen.isValid():
+            return
+
+        self.palette[index] = chosen.name().upper()
         self.selected_index = index
         self.update()
         self.color_selected.emit(self.palette[index])
