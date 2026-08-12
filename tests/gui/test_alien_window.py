@@ -3,6 +3,7 @@ import json
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
+from gui import alien_window as alien_window_module
 from gui.alien_window import AlienWindow
 from gui.palette_widget import SWATCH_SIZE, PaletteWidget
 from gui.pixel_grid import CELL_SIZE, PixelGridWidget
@@ -76,7 +77,93 @@ def test_file_menu_actions(qtbot):
     window = AlienWindow(grid=grid, palette=["#FF0000"], background="#FFFFFF")
     qtbot.addWidget(window)
     actions = [a.text() for a in window.file_menu.actions() if not a.isSeparator()]
-    assert actions == ["&Save", "Save &As...", "&Close"]
+    assert actions == ["&Save", "Save &As...", "&Generate", "&Close"]
+
+
+def test_generate_on_blank_canvas_does_not_prompt(qtbot, monkeypatch):
+    grid = [["#FFFFFF", "#FFFFFF"], ["#FFFFFF", "#FFFFFF"]]
+    window = AlienWindow(grid=grid, palette=["#FF0000"], background="#FFFFFF")
+    qtbot.addWidget(window)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Generate should not prompt when the canvas is blank")
+
+    monkeypatch.setattr(QMessageBox, "question", fail_if_called)
+    monkeypatch.setattr(
+        alien_window_module,
+        "generate_alien",
+        lambda **kwargs: [["#FF0000", "#FFFFFF"], ["#FFFFFF", "#FF0000"]],
+    )
+
+    window.generate_action.trigger()
+
+    assert window.grid == [["#FF0000", "#FFFFFF"], ["#FFFFFF", "#FF0000"]]
+    assert window.pixel_grid.grid is window.grid
+    assert window.dirty is True
+
+
+def test_generate_with_existing_content_prompts_and_confirms(qtbot, monkeypatch):
+    grid = [["#FF0000", "#FFFFFF"]]
+    window = AlienWindow(grid=grid, palette=["#FF0000"], background="#FFFFFF")
+    qtbot.addWidget(window)
+
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(
+        alien_window_module, "generate_alien", lambda **kwargs: [["#00FF00", "#00FF00"]]
+    )
+
+    window.generate_action.trigger()
+
+    assert window.grid == [["#00FF00", "#00FF00"]]
+    assert window.dirty is True
+
+
+def test_generate_with_existing_content_cancelled_leaves_grid_unchanged(qtbot, monkeypatch):
+    grid = [["#FF0000", "#FFFFFF"]]
+    window = AlienWindow(grid=grid, palette=["#FF0000"], background="#FFFFFF")
+    qtbot.addWidget(window)
+
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.No
+    )
+    called = {}
+
+    def fail_if_called(**kwargs):
+        called["was_called"] = True
+        return [["#00FF00", "#00FF00"]]
+
+    monkeypatch.setattr(alien_window_module, "generate_alien", fail_if_called)
+
+    window.generate_action.trigger()
+
+    assert "was_called" not in called
+    assert window.grid == grid
+    assert window.dirty is False
+
+
+def test_generate_uses_current_dimensions_background_and_palette(qtbot, monkeypatch):
+    grid = [["#FFFFFF", "#FFFFFF", "#FFFFFF"], ["#FFFFFF", "#FFFFFF", "#FFFFFF"]]
+    window = AlienWindow(grid=grid, palette=["#FF0000", "#00FF00"], background="#FFFFFF")
+    qtbot.addWidget(window)
+
+    captured = {}
+
+    def fake_generate_alien(**kwargs):
+        captured.update(kwargs)
+        return [["#123456"] * 3, ["#123456"] * 3]
+
+    monkeypatch.setattr(alien_window_module, "generate_alien", fake_generate_alien)
+
+    window.generate_action.trigger()
+
+    assert captured == {
+        "width": 3,
+        "height": 2,
+        "background": "#FFFFFF",
+        "palette": ["#FF0000", "#00FF00"],
+    }
 
 
 def test_save_with_existing_path_writes_file_without_prompting(qtbot, monkeypatch, tmp_path):

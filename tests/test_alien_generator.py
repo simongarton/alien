@@ -67,3 +67,10 @@ def test_small_grid_does_not_crash_with_bigeyes():
 def test_unknown_palette_raises():
     with pytest.raises(ValueError):
         generate_alien(palette="not-a-real-palette")
+
+
+def test_palette_accepts_an_explicit_colour_list():
+    alien = generate_alien(width=8, height=8, background="#FFFFFF", palette=["#123456"])
+    used_colors = {cell for row in alien for cell in row}
+    assert used_colors <= {"#FFFFFF", "#123456"}
+    assert "#123456" in used_colors

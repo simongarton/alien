@@ -380,20 +380,22 @@ def generate_alien(
     width: int = 16,
     height: int = 16,
     background: str = "#ffffff",
-    palette: str = "cga",
+    palette: str | list[str] = "cga",
     eyes: int = 2,
     bigeyes: bool = False,
     legs: int | None = None,
     arms: int = 0,
     shape: str | None = None,
 ) -> list[list[str]]:
-    """Generate an alien as a grid (list of rows) of hex colour strings."""
+    """Generate an alien as a grid (list of rows) of hex colour strings. `palette`
+    is either the name of a built-in palette, or an explicit list of hex colours
+    to paint with."""
     if legs is None:
         legs = random.randint(2, 5)
     if shape is None:
         shape = random.choice(SHAPES)
 
-    colors = build_palette(palette, background)
+    colors = build_palette(palette, background) if isinstance(palette, str) else palette
     grid = [[background for _ in range(width)] for _ in range(height)]
 
     mask = _symmetric_mask(width, height, shape)
