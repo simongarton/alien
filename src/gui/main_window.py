@@ -88,7 +88,13 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.StandardButton.Yes:
-            event.accept()
-        else:
+        if reply != QMessageBox.StandardButton.Yes:
             event.ignore()
+            return
+
+        for window in list(self.alien_windows):
+            if not window.close():
+                event.ignore()
+                return
+
+        event.accept()

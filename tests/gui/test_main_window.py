@@ -137,3 +137,80 @@ def test_close_cancelled_keeps_window_open(qtbot, monkeypatch):
     )
     window.close()
     assert window.isVisible()
+
+
+def test_exit_confirmed_closes_all_alien_windows(qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.show()
+    monkeypatch.setattr(NewAlienDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(
+        NewAlienDialog,
+        "values",
+        lambda self: {"width": 2, "height": 2, "palette": "cga", "background": "#FFFFFF"},
+    )
+    window.new_action.trigger()
+    window.new_action.trigger()
+    assert len(window.alien_windows) == 2
+
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
+    )
+
+    window.close()
+
+    assert not window.isVisible()
+    qtbot.waitUntil(lambda: window.alien_windows == [], timeout=1000)
+
+
+def test_exit_cancelled_at_confirmation_keeps_everything_open(qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.show()
+    monkeypatch.setattr(NewAlienDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(
+        NewAlienDialog,
+        "values",
+        lambda self: {"width": 2, "height": 2, "palette": "cga", "background": "#FFFFFF"},
+    )
+    window.new_action.trigger()
+    assert len(window.alien_windows) == 1
+
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.No
+    )
+
+    window.close()
+
+    assert window.isVisible()
+    assert len(window.alien_windows) == 1
+    assert window.alien_windows[0].isVisible()
+
+
+def test_exit_aborts_if_an_alien_window_close_is_cancelled(qtbot, monkeypatch):
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.show()
+    monkeypatch.setattr(NewAlienDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(
+        NewAlienDialog,
+        "values",
+        lambda self: {"width": 2, "height": 2, "palette": "cga", "background": "#FFFFFF"},
+    )
+    window.new_action.trigger()
+    assert len(window.alien_windows) == 1
+    alien_window = window.alien_windows[0]
+    alien_window.dirty = True
+
+    def fake_question(parent, title, *args, **kwargs):
+        if title == "Exit":
+            return QMessageBox.StandardButton.Yes
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "question", fake_question)
+
+    window.close()
+
+    assert window.isVisible()
+    assert alien_window.isVisible()
+    assert len(window.alien_windows) == 1
