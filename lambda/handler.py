@@ -39,10 +39,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     alien = generate_alien(
         width=_int_param(params, "width", 16),
         height=_int_param(params, "height", 16),
-        background=params.get("background", "#ffffff"),
+        background=params.get("background", "#000000"),
         palette=params.get("palette", "cga"),
         eyes=_int_param(params, "eyes", 2),
-        bigeyes=_bool_param(params, "bigeyes", False),
+        bigeyes=_bool_param(params, "bigeyes", True),
         legs=_int_param(params, "legs", None),
         arms=_int_param(params, "arms", 0),
         shape=params.get("shape"),
