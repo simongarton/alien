@@ -21,3 +21,7 @@ aliens/
 *.tfstate.*
 *.tfplan
 terraform/.build/
+
+# Contains a live API key -- see scripts/call_alien_api.py
+/scripts/call_alien_api.py
+/api_test_alien.png
