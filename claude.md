@@ -12,7 +12,7 @@ A series of scripts to generate images of aliens. All images
 - Run tests: `uv run pytest`
 - Lint: `uv run ruff check .`
 - Run locally: `uv run python main.py`
-- Deploy: `cdk deploy`
+- Deploy: `terraform apply`
 
 ## Project structure
 - `src/` — application code
