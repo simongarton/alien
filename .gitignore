@@ -25,3 +25,4 @@ terraform/.build/
 /scripts/secrets.py
 api_test_alien.png
 /claude-sessions/
+/claude-sessions/
