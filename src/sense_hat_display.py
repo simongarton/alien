@@ -27,7 +27,10 @@ def _to_pixels(grid: list[list[str]]) -> list[tuple[int, int, int]]:
 
 def show_random_alien(sense: SenseHat) -> None:
     # bigeyes forced on: at 8x8 single-pixel eyes are barely visible on the LED matrix.
-    alien = generate_alien(width=8, height=8, background=BACKGROUND, palette="full", bigeyes=True)
+    # border=False: at 8x8 the default margin would leave the body only 6px wide.
+    alien = generate_alien(
+        width=8, height=8, background=BACKGROUND, palette="full", bigeyes=True, border=False
+    )
     sense.set_pixels(_to_pixels(alien))
 
 

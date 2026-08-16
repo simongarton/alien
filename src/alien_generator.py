@@ -56,14 +56,17 @@ def build_palette(name: str, background: str) -> list[str]:
 WOBBLE_RANGE = (0.85, 1.05)
 
 
-def _body_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
+def _body_mask(width: int, height: int, shape: str, border: bool = True) -> set[tuple[int, int]]:
     """Return the set of (row, col) cells inside the given shape, leaving room at the
-    bottom for legs, the top for arms sticking up, and a border on all sides so the
-    body never touches the edge of the grid. Each row's width is nudged by a random
-    wobble factor so the silhouette isn't a perfectly clean shape."""
-    top_margin = max(1, height // 8)
+    bottom for legs, the top for arms sticking up, and -- if border is True -- a
+    margin on the sides and top so the body doesn't touch the edge of the grid.
+    With border=False the body is free to fill the full width and top row, which
+    matters on very small/low-resolution displays where every pixel counts. Each
+    row's width is nudged by a random wobble factor so the silhouette isn't a
+    perfectly clean shape."""
     bottom_margin = max(2, height // 4)
-    side_margin = max(1, width // 8)
+    top_margin = max(1, height // 8) if border else 0
+    side_margin = max(1, width // 8) if border else 0
     body_top = top_margin
     body_bottom = height - bottom_margin
     body_left = side_margin
@@ -104,10 +107,10 @@ def _body_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
     return mask
 
 
-def _symmetric_mask(width: int, height: int, shape: str) -> set[tuple[int, int]]:
+def _symmetric_mask(width: int, height: int, shape: str, border: bool = True) -> set[tuple[int, int]]:
     """Build the body mask on the left half, then mirror it onto the right half
     so the alien is left-right symmetric and solidly filled."""
-    full_mask = _body_mask(width, height, shape)
+    full_mask = _body_mask(width, height, shape, border=border)
     half_width = (width + 1) // 2
 
     result = set()
@@ -386,10 +389,13 @@ def generate_alien(
     legs: int | None = None,
     arms: int = 0,
     shape: str | None = None,
+    border: bool = True,
 ) -> list[list[str]]:
     """Generate an alien as a grid (list of rows) of hex colour strings. `palette`
     is either the name of a built-in palette, or an explicit list of hex colours
-    to paint with."""
+    to paint with. Set `border=False` to let the body fill the full width and top
+    row of the grid -- useful for small displays (e.g. an 8x8 LED matrix) where
+    the default margin would otherwise waste a large fraction of the pixels."""
     if legs is None:
         legs = random.randint(2, 5)
     if shape is None:
@@ -398,7 +404,7 @@ def generate_alien(
     colors = build_palette(palette, background) if isinstance(palette, str) else palette
     grid = [[background for _ in range(width)] for _ in range(height)]
 
-    mask = _symmetric_mask(width, height, shape)
+    mask = _symmetric_mask(width, height, shape, border=border)
     body_color = random.choice(colors)
     for row, col in mask:
         grid[row][col] = body_color
