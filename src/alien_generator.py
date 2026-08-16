@@ -145,6 +145,7 @@ def _place_eyes(
     height: int,
     eyes: int,
     bigeyes: bool,
+    shape: str | None = None,
 ) -> set[tuple[int, int]]:
     """Paint eyes onto the grid, symmetric about the vertical centre line. Eyes are
     only ever placed where a ring of body colour surrounds them, so an eye never
@@ -155,7 +156,12 @@ def _place_eyes(
 
     cx = (width - 1) / 2
     body_rows = sorted({row for row, _ in mask})
-    target_row = body_rows[max(0, len(body_rows) // 4)]
+    # A plain "triangle" body is narrowest at the top, so eyes are more likely to
+    # fit if we look near the bottom instead of the usual near-the-top target row.
+    if shape == "triangle":
+        target_row = body_rows[min(len(body_rows) - 1, (3 * len(body_rows)) // 4)]
+    else:
+        target_row = body_rows[max(0, len(body_rows) // 4)]
 
     eye_size = 2 if bigeyes else 1
     safe = _eroded_mask(mask, eye_size)
@@ -409,7 +415,7 @@ def generate_alien(
     for row, col in mask:
         grid[row][col] = body_color
 
-    consumed = _place_eyes(grid, mask, width, height, eyes, bigeyes)
+    consumed = _place_eyes(grid, mask, width, height, eyes, bigeyes, shape)
     feature_mask = mask - consumed
 
     _add_legs(grid, feature_mask, width, height, legs, body_color)
