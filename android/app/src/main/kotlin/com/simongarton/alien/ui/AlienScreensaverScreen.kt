@@ -5,6 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
@@ -32,8 +34,19 @@ private const val MIN_SPAWN_DELAY_MS = 900L
 private const val MAX_SPAWN_DELAY_MS = 3000L
 
 @Composable
-fun AlienScreensaverScreen(modifier: Modifier = Modifier) {
-    BoxWithConstraints(modifier = modifier.fillMaxSize().background(BACKGROUND_COLOR)) {
+fun AlienScreensaverScreen(
+    modifier: Modifier = Modifier,
+    onDoubleTap: () -> Unit = {},
+) {
+    BoxWithConstraints(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(BACKGROUND_COLOR)
+                .pointerInput(Unit) {
+                    detectTapGestures(onDoubleTap = { onDoubleTap() })
+                },
+    ) {
         val density = LocalDensity.current
         val screenWidthPx = with(density) { maxWidth.toPx() }
         val screenHeightPx = with(density) { maxHeight.toPx() }

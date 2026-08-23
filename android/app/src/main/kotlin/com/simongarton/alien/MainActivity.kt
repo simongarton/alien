@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         hideSystemBars()
         setContent {
             MaterialTheme {
-                AlienScreensaverScreen()
+                AlienScreensaverScreen(onDoubleTap = { finish() })
             }
         }
     }
