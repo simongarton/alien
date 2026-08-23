@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -99,6 +98,9 @@ private fun AnimatedAlien(
         onFinished()
     }
 
+    val currentAlpha = alpha.value
+    val currentProgress = progress.value
+
     val density = LocalDensity.current
     val widthDp = with(density) { (sprite.gridWidth * sprite.cellSizePx).toDp() }
     val heightDp = with(density) { (sprite.gridHeight * sprite.cellSizePx).toDp() }
@@ -106,10 +108,9 @@ private fun AnimatedAlien(
     Canvas(
         modifier =
             Modifier
-                .graphicsLayer { this.alpha = alpha.value }
                 .offset {
-                    val x = sprite.start.x + (sprite.end.x - sprite.start.x) * progress.value
-                    val y = sprite.start.y + (sprite.end.y - sprite.start.y) * progress.value
+                    val x = sprite.start.x + (sprite.end.x - sprite.start.x) * currentProgress
+                    val y = sprite.start.y + (sprite.end.y - sprite.start.y) * currentProgress
                     IntOffset(x.roundToInt(), y.roundToInt())
                 }.size(widthDp, heightDp),
     ) {
@@ -118,8 +119,11 @@ private fun AnimatedAlien(
             for (col in rowColors.indices) {
                 val color = rowColors[col]
                 if (color == BACKGROUND_COLOR) continue
+                // Bake alpha into the drawn colour rather than using Modifier.alpha()/graphicsLayer:
+                // on this device the layer-level alpha wasn't compositing intermediate values, so
+                // the alien stayed invisible until alpha was essentially 1 and then popped in.
                 drawRect(
-                    color = color,
+                    color = color.copy(alpha = currentAlpha),
                     topLeft = Offset(col * sprite.cellSizePx, row * sprite.cellSizePx),
                     size = Size(sprite.cellSizePx, sprite.cellSizePx),
                 )
