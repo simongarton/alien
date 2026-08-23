@@ -83,9 +83,9 @@ private fun AnimatedAlien(
     LaunchedEffect(sprite.id) {
         val alphaJob =
             launch {
-                alpha.animateTo(1f, tween(sprite.fadeInMs))
+                alpha.animateTo(1f, tween(sprite.fadeInMs, easing = LinearEasing))
                 delay(sprite.holdMs.toLong())
-                alpha.animateTo(0f, tween(sprite.fadeOutMs))
+                alpha.animateTo(0f, tween(sprite.fadeOutMs, easing = LinearEasing))
             }
         val progressJob =
             launch {
