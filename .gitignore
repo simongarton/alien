@@ -25,4 +25,15 @@ terraform/.build/
 /scripts/secrets.py
 api_test_alien.png
 /claude-sessions/
-/claude-sessions/
+
+# Android
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/*.iml
+android/.idea/
+android/.kotlin/
+android/captures/
+android/.cxx/
+/android/claude-sessions/
