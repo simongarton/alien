@@ -52,7 +52,32 @@ private fun interpolate(
     }
 }
 
-/** Build the list of usable body colours for a palette, excluding the background. */
+private const val MIN_BACKGROUND_DISTANCE = 60.0
+
+private fun hexToRgb(hex: String): Triple<Int, Int, Int> =
+    Triple(
+        hex.substring(1, 3).toInt(16),
+        hex.substring(3, 5).toInt(16),
+        hex.substring(5, 7).toInt(16),
+    )
+
+private fun colorDistance(
+    a: String,
+    b: String,
+): Double {
+    val (ar, ag, ab) = hexToRgb(a)
+    val (br, bg, bb) = hexToRgb(b)
+    val dr = (ar - br).toDouble()
+    val dg = (ag - bg).toDouble()
+    val db = (ab - bb).toDouble()
+    return kotlin.math.sqrt(dr * dr + dg * dg + db * db)
+}
+
+/**
+ * Build the list of usable body colours for a palette, excluding the background and anything
+ * close enough to it (e.g. a near-black colour from the `full` palette against a black
+ * background) to be effectively invisible against it.
+ */
 fun buildPalette(
     name: String,
     background: String,
@@ -74,8 +99,10 @@ fun buildPalette(
 
     val backgroundUpper = background.uppercase()
     val filtered = colors.filter { it.uppercase() != backgroundUpper }
-    require(filtered.isNotEmpty()) { "Palette '$name' has no colours left after excluding background $background" }
-    return filtered
+    val visible = filtered.filter { colorDistance(it, background) >= MIN_BACKGROUND_DISTANCE }
+    val result = visible.ifEmpty { filtered }
+    require(result.isNotEmpty()) { "Palette '$name' has no colours left after excluding background $background" }
+    return result
 }
 
 private const val WOBBLE_MIN = 0.85

@@ -32,8 +32,19 @@ def _interpolate(start_hex: str, end_hex: str, steps: int) -> list[str]:
     return colors
 
 
+MIN_BACKGROUND_DISTANCE = 60
+
+
+def _color_distance(a: str, b: str) -> float:
+    ar, ag, ab = (int(a[i : i + 2], 16) for i in (1, 3, 5))
+    br, bg, bb = (int(b[i : i + 2], 16) for i in (1, 3, 5))
+    return ((ar - br) ** 2 + (ag - bg) ** 2 + (ab - bb) ** 2) ** 0.5
+
+
 def build_palette(name: str, background: str) -> list[str]:
-    """Build the list of usable body colours for a palette, excluding the background."""
+    """Build the list of usable body colours for a palette, excluding the background and
+    anything close enough to it (e.g. a near-black colour from the `full` palette against a
+    black background) to be effectively invisible against it."""
     if name == "cga":
         colors = list(CGA_PALETTE)
     elif name in SHADE_PALETTES:
@@ -48,6 +59,8 @@ def build_palette(name: str, background: str) -> list[str]:
 
     background_upper = background.upper()
     colors = [c for c in colors if c.upper() != background_upper]
+    visible = [c for c in colors if _color_distance(c, background) >= MIN_BACKGROUND_DISTANCE]
+    colors = visible or colors
     if not colors:
         raise ValueError(f"Palette '{name}' has no colours left after excluding background {background}")
     return colors

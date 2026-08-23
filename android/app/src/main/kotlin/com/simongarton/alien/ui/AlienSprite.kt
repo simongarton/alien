@@ -15,8 +15,8 @@ private const val MAX_GRID_SIZE = 24
 private const val MIN_CELL_PX = 4f
 private const val MAX_RENDER_FRACTION_OF_HALF_SCREEN = 1f
 private const val MIN_RENDER_FRACTION_OF_HALF_SCREEN = 0.3f
-private const val MIN_FADE_MS = 1200
-private const val MAX_FADE_MS = 2400
+private const val MIN_FADE_MS = 2000
+private const val MAX_FADE_MS = 5000
 private const val MIN_HOLD_MS = 4000
 private const val MAX_HOLD_MS = 9000
 
