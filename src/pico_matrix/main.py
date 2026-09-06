@@ -19,17 +19,24 @@ import time
 from alien_generator import generate_alien
 from pico_neopixel_matrix_driver import NeoPixelMatrix
 
-REFRESH_SECONDS = 1
+REFRESH_SECONDS = 10
+PAUSE_SECONDS = 2
 BACKGROUND = "#000000"
 
 
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
     return tuple(int(color[i : i + 2], 16) for i in (1, 3, 5))
 
+def blank_screen(matrix: NeoPixelMatrix) -> None:
+    for y in range(16):
+        for x in range(16):
+            matrix.set_pixel(x, y, _hex_to_rgb(BACKGROUND))
+    matrix.show()
+
 
 def draw_random_alien(matrix: NeoPixelMatrix) -> None:
     alien = generate_alien(
-        width=matrix.width, height=matrix.height, background=BACKGROUND, palette="full", bigeyes=True
+        width=matrix.width, height=matrix.height, background=BACKGROUND, palette="full", bigeyes=True, border=False
     )
     for y, row in enumerate(alien):
         for x, color in enumerate(row):
@@ -39,9 +46,13 @@ def draw_random_alien(matrix: NeoPixelMatrix) -> None:
 
 def main() -> None:
     matrix = NeoPixelMatrix()
+    blank_screen(matrix)
+    time.sleep(PAUSE_SECONDS)
     while True:
         draw_random_alien(matrix)
         time.sleep(REFRESH_SECONDS)
+        blank_screen(matrix)
+        time.sleep(PAUSE_SECONDS)
 
 
 if __name__ == "__main__":
