@@ -37,3 +37,7 @@ android/.kotlin/
 android/captures/
 android/.cxx/
 /android/claude-sessions/
+/claude-sessions/
+
+# macOS
+.DS_Store
