@@ -11,11 +11,15 @@ I am trying to keep the main `alien_generator.py` untouched.
 
 - Matrix DIN connector's data wire -> Pico `DATA_PIN` (GP0 by default, see
   `pico_neopixel_matrix_driver.py`).
-- Matrix DIN and mid-panel connectors' 5V/GND -> a separate 5V supply (NOT the
-  Pico), wired in parallel. The Pico is powered independently (USB).
-- Matrix GND -> also tied to a Pico GND pin, so the data signal has a common
-  reference with the panel's power rail.
-- DOUT connector is unused (no second panel chained on).
+- Matrix DIN and mid-panel connectors' 5V/GND -> the 5V supply, wired in
+  parallel.
+- Matrix DOUT connector's `5V`/`GND` -> Pico `VSYS` (pin 39) / `GND` (pin 38).
+  DOUT is otherwise unused (no second panel chained on), so it's a convenient
+  place to draw the Pico's own power from the same 5V supply instead of a
+  separate USB brick -- it also gives the Pico and the matrix a shared ground
+  for free. Use `VSYS`, not `VBUS`: it's the documented external-power input
+  and goes through the Pico's onboard protection diode. USB can still be
+  plugged in at the same time (e.g. for Thonny) without conflict.
 
 ## If the alien looks scrambled
 
