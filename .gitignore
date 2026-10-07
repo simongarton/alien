@@ -41,3 +41,4 @@ android/.cxx/
 
 # macOS
 .DS_Store
+/claude-sessions/
